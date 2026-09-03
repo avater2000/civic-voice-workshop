@@ -5,6 +5,7 @@ import { limitFeedbackLength, MAX_FEEDBACK_LENGTH } from "../feedback";
 export function CitizenPage({ user }) {
   const [message, setMessage] = useState("");
   const [submitted, setSubmitted] = useState(false);
+  const [reference, setReference] = useState("");
   const [error, setError] = useState("");
   const successHeading = useRef(null);
 
@@ -20,7 +21,8 @@ export function CitizenPage({ user }) {
       return;
     }
     try {
-      await submitFeedback({ nric: user.nric, name: user.name, message });
+      const response = await submitFeedback({ nric: user.nric, name: user.name, message });
+      setReference(response.feedback.reference);
       setSubmitted(true);
       setMessage("");
     } catch (requestError) {
@@ -30,6 +32,7 @@ export function CitizenPage({ user }) {
 
   function submitAnother() {
     setError("");
+    setReference("");
     setSubmitted(false);
   }
 
@@ -45,6 +48,7 @@ export function CitizenPage({ user }) {
           <div className="submission-success" role="status" aria-live="polite">
             <h2 ref={successHeading} tabIndex="-1">Feedback received</h2>
             <div className="success-banner">Thank you. Your feedback has been received.</div>
+            <p className="submission-reference">Your reference number: <strong>{reference}</strong></p>
             <button className="primary-button" type="button" onClick={submitAnother}>Submit another</button>
           </div>
         ) : <form onSubmit={handleSubmit}>

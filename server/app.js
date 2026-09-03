@@ -36,7 +36,7 @@ export async function createApp(options = {}) {
     const { nric, name, message } = req.body ?? {};
     if (!message) return res.status(400).json({ error: "Please enter feedback." });
     const feedback = {
-      id: crypto.randomUUID(), nric, name, message, category: "General", status: "New",
+      id: crypto.randomUUID(), reference: `CV-${crypto.randomInt(100000, 1000000)}`, nric, name, message, category: "General", status: "New",
       createdAt: new Date().toISOString(),
     };
     db.data.feedback.unshift(feedback);
