@@ -66,3 +66,10 @@ export function updateFeedbackStatus(user, feedbackId, status) {
 export function getFeedbackDetail(user, id) {
   return api(`/api/feedback/${encodeURIComponent(id)}`, { headers: { "x-user-role": user.role } });
 }
+
+export function summarizeFeedback(user, id) {
+  return api(`/api/feedback/${encodeURIComponent(id)}/summary`, {
+    method: "POST",
+    headers: { "x-user-role": user.role },
+  });
+}

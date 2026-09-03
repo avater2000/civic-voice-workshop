@@ -8,6 +8,7 @@ import { verifyPassword } from "./lib/passwords.js";
 import { sendError } from "./lib/errors.js";
 import { toCsv } from "./lib/csv.js";
 import { normalizeFeedbackText } from "./lib/feedback-text.js";
+import { createFeedbackSummarizer } from "./lib/feedback-summary.js";
 
 function getFilteredFeedback(feedback, { category, status, query }) {
   let filtered = [...feedback].sort(
@@ -46,6 +47,7 @@ function paginateFeedback(feedback, requestedPage) {
 export async function createApp(options = {}) {
   const db = options.db ?? (await createDb());
   const loginRateLimiter = options.loginRateLimiter ?? createLoginRateLimiter(options.loginRateLimitOptions);
+  const summarizeFeedback = options.summarizeFeedback ?? createFeedbackSummarizer();
   const app = express();
   app.use(cors());
   app.use(express.json());
@@ -126,6 +128,27 @@ export async function createApp(options = {}) {
       return sendError(res, 404, "FEEDBACK_NOT_FOUND", "Feedback was not found.");
   }
     return res.json({ feedback });
+  });
+
+  app.post("/api/feedback/:id/summary", async (req, res) => {
+    if (!isAdminRequest(req)) {
+      return sendError(res, 403, "FORBIDDEN", "Admin access required.");
+    }
+    const feedback = db.data.feedback.find((item) => item.id === req.params.id);
+    if (!feedback) return sendError(res, 404, "FEEDBACK_NOT_FOUND", "Feedback was not found.");
+    if (feedback.message.length <= 200) {
+      return sendError(res, 400, "SUMMARY_NOT_REQUIRED", "Only feedback longer than 200 characters can be summarized.");
+    }
+    if (feedback.summary) return res.json({ summary: feedback.summary, cached: true });
+
+    try {
+      const summary = await summarizeFeedback(feedback.message);
+      feedback.summary = summary;
+      await db.write();
+      return res.json({ summary, cached: false });
+    } catch {
+      return sendError(res, 503, "SUMMARY_UNAVAILABLE", "Summary could not be generated. The original feedback remains available.");
+    }
   });
 
   app.post("/api/feedback", async (req, res) => {

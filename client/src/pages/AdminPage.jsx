@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { getFeedback, getFeedbackCsv, getFeedbackDetail, updateFeedbackStatus } from "../api";
+import { getFeedback, getFeedbackCsv, getFeedbackDetail, summarizeFeedback, updateFeedbackStatus } from "../api";
 import { maskIdentifier } from "../identifier";
 import { sortFeedbackNewestFirst } from "../inbox";
 import { FeedbackText } from "../components/FeedbackText";
@@ -126,7 +126,7 @@ export function AdminPage({ user }) {
         <button className="text-button back-button" type="button" onClick={closeDetail}>← Back to inbox</button>
         {isLoadingDetail && <section className="inbox-state" role="status"><h2>Loading feedback</h2></section>}
         {detailError && <section className="inbox-state inbox-error" role="alert"><h2>We couldn’t load this feedback</h2><p>{detailError}</p></section>}
-        {selectedFeedback && <FeedbackDetail item={selectedFeedback} />}
+        {selectedFeedback && <FeedbackDetail item={selectedFeedback} user={user} />}
       </main>
     );
   }
@@ -237,7 +237,23 @@ export function AdminPage({ user }) {
   );
 }
 
-function FeedbackDetail({ item }) {
+function FeedbackDetail({ item, user }) {
+  const [summary, setSummary] = useState(item.summary ?? "");
+  const [summaryError, setSummaryError] = useState("");
+  const [isSummarizing, setIsSummarizing] = useState(false);
+
+  async function createSummary() {
+    setIsSummarizing(true);
+    setSummaryError("");
+    try {
+      const response = await summarizeFeedback(user, item.id);
+      setSummary(response.summary);
+    } catch (requestError) {
+      setSummaryError(requestError.message || "We could not create a summary.");
+    } finally {
+      setIsSummarizing(false);
+    }
+  }
   const fields = [
     ["Reference", item.reference ?? "Not assigned"],
     ["Feedback ID", item.id],
@@ -257,6 +273,13 @@ function FeedbackDetail({ item }) {
       </dl>
       <h2>Message</h2>
       <p className="feedback-message">{item.message}</p>
+      {item.message.length > 200 && <section className="feedback-summary" aria-label="AI summary">
+        <h2>AI summary</h2>
+        {summary ? <p>{summary}</p> : <button className="text-button" type="button" onClick={createSummary} disabled={isSummarizing}>
+          {isSummarizing ? "Summarizing…" : "Summarize feedback"}
+        </button>}
+        {summaryError && <p className="error-message" role="alert">{summaryError}</p>}
+      </section>}
     </section>
   );
 }

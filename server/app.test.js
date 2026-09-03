@@ -2,7 +2,7 @@ import { mkdtemp } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import request from "supertest";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { createApp } from "./app.js";
 import { createDb } from "./lib/db.js";
 
@@ -136,6 +136,38 @@ describe("CivicVoice baseline API", () => {
     }));
     expect(missing.status).toBe(404);
     expect(missing.body.error.code).toBe("FEEDBACK_NOT_FOUND");
+  });
+
+  it("generates and caches an admin-requested summary for long feedback", async () => {
+    const directory = await mkdtemp(path.join(os.tmpdir(), "civic-voice-"));
+    const db = await createDb(path.join(directory, "db.json"));
+    const feedback = db.data.feedback[0];
+    feedback.message = "The covered walkway lighting is unreliable during the evening commute. ".repeat(4);
+    const summarizeFeedback = vi.fn().mockResolvedValue("The walkway lights are unreliable during evening commutes.");
+    const app = await createApp({ db, summarizeFeedback });
+
+    const first = await request(app).post(`/api/feedback/${feedback.id}/summary`).set("x-user-role", "admin");
+    const second = await request(app).post(`/api/feedback/${feedback.id}/summary`).set("x-user-role", "admin");
+
+    expect(first.body).toEqual({ summary: "The walkway lights are unreliable during evening commutes.", cached: false });
+    expect(second.body).toEqual({ summary: "The walkway lights are unreliable during evening commutes.", cached: true });
+    expect(summarizeFeedback).toHaveBeenCalledTimes(1);
+    expect(db.data.feedback[0].summary).toBe("The walkway lights are unreliable during evening commutes.");
+  });
+
+  it("keeps the original feedback readable when summary generation fails", async () => {
+    const directory = await mkdtemp(path.join(os.tmpdir(), "civic-voice-"));
+    const db = await createDb(path.join(directory, "db.json"));
+    const feedback = db.data.feedback[0];
+    feedback.message = "The covered walkway lighting is unreliable during the evening commute. ".repeat(4);
+    const app = await createApp({ db, summarizeFeedback: vi.fn().mockRejectedValue(new Error("service unavailable")) });
+
+    const response = await request(app).post(`/api/feedback/${feedback.id}/summary`).set("x-user-role", "admin");
+
+    expect(response.status).toBe(503);
+    expect(response.body.error.code).toBe("SUMMARY_UNAVAILABLE");
+    expect(db.data.feedback[0].message).toBe(feedback.message);
+    expect(db.data.feedback[0].summary).toBeUndefined();
   });
 
   it("uses structured errors for invalid login and unknown routes", async () => {
