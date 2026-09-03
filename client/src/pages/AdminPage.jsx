@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { getFeedback } from "../api";
 import { maskIdentifier } from "../identifier";
+import { sortFeedbackNewestFirst } from "../inbox";
 
 export function AdminPage({ user }) {
   const [feedback, setFeedback] = useState([]);
@@ -13,7 +14,7 @@ export function AdminPage({ user }) {
     setError("");
 
     return getFeedback(user)
-      .then((response) => setFeedback(response.feedback))
+      .then((response) => setFeedback(sortFeedbackNewestFirst(response.feedback)))
       .catch((requestError) => setError(requestError.message || "We could not load the feedback inbox."))
       .finally(() => setIsLoading(false));
   };
