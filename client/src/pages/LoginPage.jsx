@@ -22,7 +22,9 @@ export function LoginPage({ onLogin }) {
       const session = await login({ nric: nric.trim().toUpperCase(), password, role });
       onLogin(session);
     } catch (requestError) {
-      setError(requestError.message);
+      setError(requestError.status === 429
+        ? "Too many sign-in attempts. Please wait a minute and try again."
+        : requestError.message);
     } finally {
       setBusy(false);
     }

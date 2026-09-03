@@ -6,10 +6,10 @@ import { describe, expect, it } from "vitest";
 import { createApp } from "./app.js";
 import { createDb } from "./lib/db.js";
 
-async function testApp() {
+async function testApp(options = {}) {
   const directory = await mkdtemp(path.join(os.tmpdir(), "civic-voice-"));
   const db = await createDb(path.join(directory, "db.json"));
-  return createApp({ db });
+  return createApp({ db, ...options });
 }
 
 describe("CivicVoice baseline API", () => {
@@ -26,6 +26,24 @@ describe("CivicVoice baseline API", () => {
     });
     expect(response.status).toBe(200);
     expect(response.body.user.role).toBe("citizen");
+  });
+
+  it("rate-limits repeated failed sign-ins without blocking correct credentials", async () => {
+    const app = await testApp({ loginRateLimitOptions: { maxFailures: 2, windowMs: 60_000 } });
+    const invalidLogin = { nric: "S0000001A", password: "wrong-password", role: "citizen" };
+
+    await expect(request(app).post("/api/login").send(invalidLogin)).resolves.toMatchObject({ status: 401 });
+    await expect(request(app).post("/api/login").send(invalidLogin)).resolves.toMatchObject({ status: 401 });
+
+    const limited = await request(app).post("/api/login").send(invalidLogin);
+    expect(limited.status).toBe(429);
+    expect(limited.headers["retry-after"]).toBeDefined();
+    expect(limited.body.error).toMatch(/too many failed/i);
+
+    const validLogin = await request(app).post("/api/login").send({
+      nric: "S0000001A", password: "citizen123", role: "citizen",
+    });
+    expect(validLogin.status).toBe(200);
   });
 
   it("accepts feedback with a supported category", async () => {
