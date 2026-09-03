@@ -78,6 +78,8 @@ textarea { resize: vertical; line-height: 1.6; }
 .summary-card strong { color: var(--text); font-size: 26px; }
 .list-header { display: flex; justify-content: space-between; padding-bottom: 18px; border-bottom: 1px solid var(--subtle-line); }
 .list-header span { color: var(--muted); font-size: 14px; }
+.list-actions { display: flex; align-items: center; gap: 14px; }
+.list-actions .text-button:disabled { color: var(--muted); cursor: wait; }
 .feedback-row { display: flex; justify-content: space-between; gap: 24px; padding: 20px 0; border-bottom: 1px solid var(--subtle-line); }
 .feedback-row > div { min-width: 0; }
 .feedback-row:last-child { border-bottom: 0; padding-bottom: 0; }

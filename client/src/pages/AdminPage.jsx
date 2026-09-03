@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { getFeedback } from "../api";
+import { getFeedback, getFeedbackCsv } from "../api";
 import { maskIdentifier } from "../identifier";
 import { sortFeedbackNewestFirst } from "../inbox";
 
@@ -13,6 +13,8 @@ export function AdminPage({ user }) {
   const [category, setCategory] = useState("");
   const [status, setStatus] = useState("");
   const [isLoading, setIsLoading] = useState(true);
+  const [isExporting, setIsExporting] = useState(false);
+  const [exportError, setExportError] = useState("");
 
   const loadFeedback = () => {
     setIsLoading(true);
@@ -41,6 +43,24 @@ export function AdminPage({ user }) {
   function clearFilters() {
     setCategory("");
     setStatus("");
+  }
+
+  async function exportFeedback() {
+    setIsExporting(true);
+    setExportError("");
+    try {
+      const blob = await getFeedbackCsv(user, { category, status, query });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "civicvoice-feedback.csv";
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch (requestError) {
+      setExportError(requestError.message || "We could not export the visible feedback.");
+    } finally {
+      setIsExporting(false);
+    }
   }
 
   return (
@@ -95,12 +115,21 @@ export function AdminPage({ user }) {
           {summary.map(({ status, count }) => <div className="summary-card" key={status}><span>{status}</span><strong>{count}</strong></div>)}
         </section>
         <section className="feedback-list">
-          <div className="list-header"><strong>Latest feedback</strong><span>{visibleFeedback.length} items</span></div>
+          <div className="list-header">
+            <strong>Latest feedback</strong>
+            <div className="list-actions">
+              <span>{visibleFeedback.length} items</span>
+              <button className="text-button" type="button" onClick={exportFeedback} disabled={isExporting || visibleFeedback.length === 0}>
+                {isExporting ? "Preparing CSV…" : "Download CSV"}
+              </button>
+            </div>
+          </div>
           <label>
             Search feedback
             <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search messages or names" />
           </label>
           {visibleFeedback.length === 0 && <p className="muted">No feedback matches your search.</p>}
+          {exportError && <p className="error-message" role="alert">{exportError}</p>}
           {visibleFeedback.map((item) => (
             <article className="feedback-row" key={item.id}>
               <div>

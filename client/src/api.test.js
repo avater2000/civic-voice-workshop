@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { ApiError, getFeedback, getHealthStatus, login } from "./api";
+import { ApiError, getFeedback, getFeedbackCsv, getHealthStatus, login } from "./api";
 
 describe("API health checks", () => {
   afterEach(() => vi.unstubAllGlobals());
@@ -47,6 +47,17 @@ describe("API health checks", () => {
     expect(fetch).toHaveBeenCalledWith(
       "http://localhost:3001/api/feedback?category=Estate&status=In+review",
       expect.objectContaining({ headers: expect.objectContaining({ "x-user-role": "admin" }) }),
+    );
+  });
+
+  it("requests CSV with all active filters and the admin role", async () => {
+    const fetch = vi.fn().mockResolvedValue({ ok: true, blob: async () => new Blob(["csv"]) });
+    vi.stubGlobal("fetch", fetch);
+
+    await expect(getFeedbackCsv({ role: "admin" }, { category: "Estate", status: "New", query: "bench" })).resolves.toBeInstanceOf(Blob);
+    expect(fetch).toHaveBeenCalledWith(
+      "http://localhost:3001/api/feedback/export.csv?category=Estate&status=New&query=bench",
+      { headers: { "x-user-role": "admin" } },
     );
   });
 });
