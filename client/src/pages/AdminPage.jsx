@@ -14,6 +14,10 @@ export function AdminPage({ user }) {
     const searchableText = `${item.name} ${item.message}`.toLowerCase();
     return searchableText.includes(query.trim().toLowerCase());
   });
+  const summary = ["New", "In review", "Closed"].map((status) => ({
+    status,
+    count: feedback.filter((item) => item.status === status).length,
+  }));
 
   return (
     <main className="page-shell admin-shell">
@@ -22,6 +26,10 @@ export function AdminPage({ user }) {
         <h1>Feedback inbox</h1>
         <p>A simple view of feedback received from members of the public.</p>
       </div>
+      <section className="inbox-summary" aria-label="Inbox summary">
+        <div className="summary-card"><span>Total</span><strong>{feedback.length}</strong></div>
+        {summary.map(({ status, count }) => <div className="summary-card" key={status}><span>{status}</span><strong>{count}</strong></div>)}
+      </section>
       {error && <p className="error-message">{error}</p>}
       <section className="feedback-list">
         <div className="list-header"><strong>Latest feedback</strong><span>{visibleFeedback.length} items</span></div>
