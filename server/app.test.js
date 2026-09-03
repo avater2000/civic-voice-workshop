@@ -122,6 +122,22 @@ describe("CivicVoice baseline API", () => {
     expect(response.body.error).toEqual({ code: "FORBIDDEN", message: "Admin access required." });
   });
 
+  it("returns a selected feedback record only to an admin", async () => {
+    const app = await testApp();
+
+    const forbidden = await request(app).get("/api/feedback/fb-seed-1");
+    const response = await request(app).get("/api/feedback/fb-seed-1").set("x-user-role", "admin");
+    const missing = await request(app).get("/api/feedback/missing").set("x-user-role", "admin");
+
+    expect(forbidden.status).toBe(403);
+    expect(response.status).toBe(200);
+    expect(response.body.feedback).toEqual(expect.objectContaining({
+      id: "fb-seed-1", nric: "S0000001A", name: "Aisha Rahman", category: "General", status: "New",
+    }));
+    expect(missing.status).toBe(404);
+    expect(missing.body.error.code).toBe("FEEDBACK_NOT_FOUND");
+  });
+
   it("uses structured errors for invalid login and unknown routes", async () => {
     const app = await testApp();
     const login = await request(app).post("/api/login").send({ nric: "S0000001A", password: "bad", role: "citizen" });
