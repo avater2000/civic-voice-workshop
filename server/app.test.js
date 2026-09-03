@@ -120,6 +120,32 @@ describe("CivicVoice baseline API", () => {
     expect(unknown.body.error).toEqual({ code: "NOT_FOUND", message: "API route not found." });
   });
 
+  it("lets an admin update feedback status and persists the change", async () => {
+    const directory = await mkdtemp(path.join(os.tmpdir(), "civic-voice-"));
+    const db = await createDb(path.join(directory, "db.json"));
+    const app = await createApp({ db });
+    const feedback = db.data.feedback[0];
+
+    const response = await request(app)
+      .patch(`/api/feedback/${feedback.id}/status`)
+      .set("x-user-role", "admin")
+      .send({ status: "In review" });
+
+    expect(response.status).toBe(200);
+    expect(response.body.feedback.status).toBe("In review");
+    expect(db.data.feedback.find((item) => item.id === feedback.id).status).toBe("In review");
+  });
+
+  it("rejects unauthorized or invalid feedback status updates", async () => {
+    const app = await testApp();
+    const feedbackId = "fb-seed-1";
+
+    await expect(request(app).patch(`/api/feedback/${feedbackId}/status`).send({ status: "Closed" }))
+      .resolves.toMatchObject({ status: 403 });
+    await expect(request(app).patch(`/api/feedback/${feedbackId}/status`).set("x-user-role", "admin").send({ status: "Later" }))
+      .resolves.toMatchObject({ status: 400 });
+  });
+
   it("returns feedback newest first when stored records are out of order", async () => {
     const directory = await mkdtemp(path.join(os.tmpdir(), "civic-voice-"));
     const db = await createDb(path.join(directory, "db.json"));

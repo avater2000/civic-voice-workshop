@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { getFeedback, getFeedbackCsv } from "../api";
+import { getFeedback, getFeedbackCsv, updateFeedbackStatus } from "../api";
 import { maskIdentifier } from "../identifier";
 import { sortFeedbackNewestFirst } from "../inbox";
 
@@ -15,6 +15,8 @@ export function AdminPage({ user }) {
   const [isLoading, setIsLoading] = useState(true);
   const [isExporting, setIsExporting] = useState(false);
   const [exportError, setExportError] = useState("");
+  const [updatingId, setUpdatingId] = useState("");
+  const [statusError, setStatusError] = useState("");
 
   const loadFeedback = () => {
     setIsLoading(true);
@@ -29,6 +31,19 @@ export function AdminPage({ user }) {
   useEffect(() => {
     loadFeedback();
   }, [user, category, status]);
+
+  async function updateStatus(feedbackId, status) {
+    setStatusError("");
+    setUpdatingId(feedbackId);
+    try {
+      const response = await updateFeedbackStatus(user, feedbackId, status);
+      setFeedback((items) => items.map((item) => item.id === feedbackId ? response.feedback : item));
+    } catch (requestError) {
+      setStatusError(requestError.message || "We could not update the feedback status.");
+    } finally {
+      setUpdatingId("");
+    }
+  }
 
   const visibleFeedback = feedback.filter((item) => {
     const searchableText = `${item.name} ${item.message}`.toLowerCase();
@@ -128,6 +143,7 @@ export function AdminPage({ user }) {
             Search feedback
             <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search messages or names" />
           </label>
+          {statusError && <p className="error-message" role="alert">{statusError}</p>}
           {visibleFeedback.length === 0 && <p className="muted">No feedback matches your search.</p>}
           {exportError && <p className="error-message" role="alert">{exportError}</p>}
           {visibleFeedback.map((item) => (
@@ -138,7 +154,18 @@ export function AdminPage({ user }) {
                 </div>
                 <p>{item.message}</p>
               </div>
-              <span className="status-pill">{item.status}</span>
+              <label className="status-control">
+                <span className="visually-hidden">Status for feedback from {item.name}</span>
+                <select
+                  value={item.status}
+                  disabled={updatingId === item.id}
+                  onChange={(event) => updateStatus(item.id, event.target.value)}
+                >
+                  <option>New</option>
+                  <option>In review</option>
+                  <option>Closed</option>
+                </select>
+              </label>
             </article>
           ))}
         </section>

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { ApiError, getFeedback, getFeedbackCsv, getHealthStatus, login } from "./api";
+import { ApiError, getFeedback, getFeedbackCsv, getHealthStatus, login, updateFeedbackStatus } from "./api";
 
 describe("API health checks", () => {
   afterEach(() => vi.unstubAllGlobals());
@@ -59,5 +59,21 @@ describe("API health checks", () => {
       "http://localhost:3001/api/feedback/export.csv?category=Estate&status=New&query=bench",
       { headers: { "x-user-role": "admin" } },
     );
+  });
+
+  it("sends an admin status update to the feedback endpoint", async () => {
+    const fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ feedback: { id: "fb-1", status: "Closed" } }),
+    });
+    vi.stubGlobal("fetch", fetch);
+
+    await expect(updateFeedbackStatus({ role: "admin" }, "fb-1", "Closed"))
+      .resolves.toMatchObject({ feedback: { status: "Closed" } });
+    expect(fetch).toHaveBeenCalledWith("http://localhost:3001/api/feedback/fb-1/status", expect.objectContaining({
+      method: "PATCH",
+      headers: expect.objectContaining({ "x-user-role": "admin" }),
+      body: JSON.stringify({ status: "Closed" }),
+    }));
   });
 });
