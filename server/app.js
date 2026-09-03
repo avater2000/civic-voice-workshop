@@ -6,6 +6,20 @@ import { isFeedbackCategory } from "./lib/categories.js";
 import { createLoginRateLimiter } from "./lib/login-rate-limiter.js";
 import { verifyPassword } from "./lib/passwords.js";
 import { sendError } from "./lib/errors.js";
+import { toCsv } from "./lib/csv.js";
+
+function getFilteredFeedback(feedback, { category, status, query }) {
+  let filtered = [...feedback].sort(
+    (first, second) => new Date(second.createdAt) - new Date(first.createdAt),
+  );
+  if (category) filtered = filtered.filter((item) => item.category === category);
+  if (status) filtered = filtered.filter((item) => item.status === status);
+  const searchTerm = typeof query === "string" ? query.trim().toLowerCase() : "";
+  if (searchTerm) {
+    filtered = filtered.filter((item) => `${item.name} ${item.message}`.toLowerCase().includes(searchTerm));
+  }
+  return filtered;
+}
 
 export async function createApp(options = {}) {
   const db = options.db ?? (await createDb());
@@ -45,16 +59,22 @@ export async function createApp(options = {}) {
     if (req.header("x-user-role") !== "admin") {
       return sendError(res, 403, "FORBIDDEN", "Admin access required.");
     }
-    let feedback = [...db.data.feedback].sort(
-      (first, second) => new Date(second.createdAt) - new Date(first.createdAt),
-    );
-    if (req.query.category) {
-      feedback = feedback.filter((item) => item.category === req.query.category);
-    }
-    if (req.query.status) {
-      feedback = feedback.filter((item) => item.status === req.query.status);
-    }
+    const feedback = getFilteredFeedback(db.data.feedback, req.query);
     return res.json({ feedback });
+  });
+
+  app.get("/api/feedback/export.csv", (req, res) => {
+    if (req.header("x-user-role") !== "admin") {
+      return sendError(res, 403, "FORBIDDEN", "Admin access required.");
+    }
+    const feedback = getFilteredFeedback(db.data.feedback, req.query);
+    const rows = [
+      ["Reference", "Name", "Identifier", "Category", "Status", "Submitted at", "Feedback"],
+      ...feedback.map((item) => [item.reference, item.name, item.nric, item.category, item.status, item.createdAt, item.message]),
+    ];
+    res.type("text/csv");
+    res.attachment("civicvoice-feedback.csv");
+    return res.send(toCsv(rows));
   });
 
   app.post("/api/feedback", async (req, res) => {

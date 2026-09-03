@@ -21,6 +21,24 @@ async function api(path, options = {}) {
   return body;
 }
 
+function feedbackQuery(filters = {}) {
+  const parameters = new URLSearchParams();
+  if (filters.category) parameters.set("category", filters.category);
+  if (filters.status) parameters.set("status", filters.status);
+  if (filters.query) parameters.set("query", filters.query);
+  return parameters.size ? `?${parameters}` : "";
+}
+
+async function csvApi(path, options = {}) {
+  const response = await fetch(`${API_URL}${path}`, options);
+  if (!response.ok) {
+    const body = await response.json();
+    const error = typeof body.error === "object" ? body.error : { message: body.error };
+    throw new ApiError(error.message ?? "Something went wrong.", response.status, error.code);
+  }
+  return response.blob();
+}
+
 export function login(credentials) {
   return api("/api/login", { method: "POST", body: JSON.stringify(credentials) });
 }
@@ -31,9 +49,8 @@ export function submitFeedback(feedback) {
   return api("/api/feedback", { method: "POST", body: JSON.stringify(feedback) });
 }
 export function getFeedback(user, filters = {}) {
-  const parameters = new URLSearchParams();
-  if (filters.category) parameters.set("category", filters.category);
-  if (filters.status) parameters.set("status", filters.status);
-  const query = parameters.size ? `?${parameters}` : "";
-  return api(`/api/feedback${query}`, { headers: { "x-user-role": user.role } });
+  return api(`/api/feedback${feedbackQuery(filters)}`, { headers: { "x-user-role": user.role } });
+}
+export function getFeedbackCsv(user, filters = {}) {
+  return csvApi(`/api/feedback/export.csv${feedbackQuery(filters)}`, { headers: { "x-user-role": user.role } });
 }

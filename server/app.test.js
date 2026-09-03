@@ -155,4 +155,25 @@ describe("CivicVoice baseline API", () => {
     expect(response.status).toBe(200);
     expect(response.body.feedback.map((item) => item.id)).toEqual(["estate-closed"]);
   });
+
+  it("exports filtered feedback as safely quoted CSV", async () => {
+    const directory = await mkdtemp(path.join(os.tmpdir(), "civic-voice-"));
+    const db = await createDb(path.join(directory, "db.json"));
+    db.data.feedback = [{
+      reference: "CV-123456", name: 'Aisha, "Ace"', nric: "S0000001A", category: "Estate", status: "New",
+      createdAt: "2026-08-03T10:00:00.000Z", message: "A comma, a quote \" and\na newline.",
+    }];
+    await db.write();
+    const app = await createApp({ db });
+
+    const response = await request(app)
+      .get("/api/feedback/export.csv?category=Estate&query=Aisha")
+      .set("x-user-role", "admin");
+
+    expect(response.status).toBe(200);
+    expect(response.headers["content-type"]).toContain("text/csv");
+    expect(response.headers["content-disposition"]).toContain("civicvoice-feedback.csv");
+    expect(response.text).toContain('"Aisha, ""Ace"""');
+    expect(response.text).toContain('"A comma, a quote "" and\na newline."');
+  });
 });
