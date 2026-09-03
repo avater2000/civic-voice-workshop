@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { getFeedback, getFeedbackCsv, updateFeedbackStatus } from "../api";
+import { getFeedback, getFeedbackCsv, getFeedbackDetail, updateFeedbackStatus } from "../api";
 import { maskIdentifier } from "../identifier";
 import { sortFeedbackNewestFirst } from "../inbox";
 import { FeedbackText } from "../components/FeedbackText";
@@ -20,6 +20,10 @@ export function AdminPage({ user }) {
   const [exportError, setExportError] = useState("");
   const [updatingId, setUpdatingId] = useState("");
   const [statusError, setStatusError] = useState("");
+  const [selectedId, setSelectedId] = useState("");
+  const [selectedFeedback, setSelectedFeedback] = useState(null);
+  const [detailError, setDetailError] = useState("");
+  const [isLoadingDetail, setIsLoadingDetail] = useState(false);
 
   const loadFeedback = () => {
     setIsLoading(true);
@@ -93,6 +97,38 @@ export function AdminPage({ user }) {
     } finally {
       setIsExporting(false);
     }
+  }
+
+  async function openDetail(id) {
+    setSelectedId(id);
+    setSelectedFeedback(null);
+    setDetailError("");
+    setIsLoadingDetail(true);
+    try {
+      const response = await getFeedbackDetail(user, id);
+      setSelectedFeedback(response.feedback);
+    } catch (requestError) {
+      setDetailError(requestError.message || "We couldn't load this feedback.");
+    } finally {
+      setIsLoadingDetail(false);
+    }
+  }
+
+  function closeDetail() {
+    setSelectedId("");
+    setSelectedFeedback(null);
+    setDetailError("");
+  }
+
+  if (selectedId) {
+    return (
+      <main className="page-shell admin-shell">
+        <button className="text-button back-button" type="button" onClick={closeDetail}>← Back to inbox</button>
+        {isLoadingDetail && <section className="inbox-state" role="status"><h2>Loading feedback</h2></section>}
+        {detailError && <section className="inbox-state inbox-error" role="alert"><h2>We couldn’t load this feedback</h2><p>{detailError}</p></section>}
+        {selectedFeedback && <FeedbackDetail item={selectedFeedback} />}
+      </main>
+    );
   }
 
   return (
@@ -183,6 +219,7 @@ export function AdminPage({ user }) {
                   <option>Closed</option>
                 </select>
               </label>
+              <button className="text-button detail-button" type="button" onClick={() => openDetail(item.id)}>View details</button>
             </article>
           ))}
           <nav className="pagination" aria-label="Feedback pages">
@@ -197,5 +234,29 @@ export function AdminPage({ user }) {
         </section>
       </>}
     </main>
+  );
+}
+
+function FeedbackDetail({ item }) {
+  const fields = [
+    ["Reference", item.reference ?? "Not assigned"],
+    ["Feedback ID", item.id],
+    ["Submitted by", item.name],
+    ["NRIC-like ID", maskIdentifier(item.nric)],
+    ["Category", item.category ?? "Uncategorised"],
+    ["Status", item.status],
+    ["Submitted", new Date(item.createdAt).toLocaleString()],
+  ];
+
+  return (
+    <section className="feedback-detail">
+      <div className="eyebrow">Feedback detail</div>
+      <h1>Feedback from {item.name}</h1>
+      <dl>
+        {fields.map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}
+      </dl>
+      <h2>Message</h2>
+      <p className="feedback-message">{item.message}</p>
+    </section>
   );
 }

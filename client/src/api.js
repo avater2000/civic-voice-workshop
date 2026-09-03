@@ -62,3 +62,7 @@ export function updateFeedbackStatus(user, feedbackId, status) {
     body: JSON.stringify({ status }),
   });
 }
+
+export function getFeedbackDetail(user, id) {
+  return api(`/api/feedback/${encodeURIComponent(id)}`, { headers: { "x-user-role": user.role } });
+}

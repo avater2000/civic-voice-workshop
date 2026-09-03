@@ -117,6 +117,17 @@ export async function createApp(options = {}) {
     return res.json({ feedback });
   });
 
+  app.get("/api/feedback/:id", (req, res) => {
+    if (!isAdminRequest(req)) {
+      return sendError(res, 403, "FORBIDDEN", "Admin access required.");
+    }
+    const feedback = db.data.feedback.find((item) => item.id === req.params.id);
+    if (!feedback) {
+      return sendError(res, 404, "FEEDBACK_NOT_FOUND", "Feedback was not found.");
+  }
+    return res.json({ feedback });
+  });
+
   app.post("/api/feedback", async (req, res) => {
     const { nric, name, message, category } = req.body ?? {};
     if (typeof message !== "string" || !message.trim()) {
