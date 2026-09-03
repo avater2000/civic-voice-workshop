@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { getHealthStatus } from "./api";
+import { ApiError, getHealthStatus, login } from "./api";
 
 describe("API health checks", () => {
   afterEach(() => vi.unstubAllGlobals());
@@ -24,5 +24,18 @@ describe("API health checks", () => {
     }));
 
     await expect(getHealthStatus()).resolves.toBe(false);
+  });
+
+  it("keeps the HTTP status on API errors so login can handle rate limits", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
+      ok: false,
+      status: 429,
+      json: async () => ({ error: "Too many failed sign-in attempts." }),
+    }));
+
+    await expect(login({})).rejects.toMatchObject({
+      name: "Error", status: 429, message: "Too many failed sign-in attempts.",
+    });
+    await expect(login({})).rejects.toBeInstanceOf(ApiError);
   });
 });

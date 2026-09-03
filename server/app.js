@@ -3,9 +3,11 @@ import express from "express";
 import cors from "cors";
 import { createDb } from "./lib/db.js";
 import { isFeedbackCategory } from "./lib/categories.js";
+import { createLoginRateLimiter } from "./lib/login-rate-limiter.js";
 
 export async function createApp(options = {}) {
   const db = options.db ?? (await createDb());
+  const loginRateLimiter = options.loginRateLimiter ?? createLoginRateLimiter(options.loginRateLimitOptions);
   const app = express();
   app.use(cors());
   app.use(express.json());
@@ -16,10 +18,22 @@ export async function createApp(options = {}) {
 
   app.post("/api/login", (req, res) => {
     const { nric, password, role } = req.body ?? {};
+    const rateLimitKey = req.ip;
     const user = db.data.users.find(
       (candidate) => candidate.nric === nric && candidate.password === password && candidate.role === role,
     );
-    if (!user) return res.status(401).json({ error: "Invalid NRIC, password, or sign-in mode." });
+    if (!user) {
+      const retryAfter = loginRateLimiter.isLimited(rateLimitKey);
+      if (retryAfter) {
+        return res.status(429).set("Retry-After", String(retryAfter)).json({
+          error: `Too many failed sign-in attempts. Try again in ${retryAfter} seconds.`,
+        });
+      }
+      loginRateLimiter.recordFailure(rateLimitKey);
+      return res.status(401).json({ error: "Invalid NRIC, password, or sign-in mode." });
+    }
+
+    loginRateLimiter.clear(rateLimitKey);
 
     // Workshop baseline only: this is deliberately not a production session.
     const token = Buffer.from(`${user.nric}:${user.role}`).toString("base64");
