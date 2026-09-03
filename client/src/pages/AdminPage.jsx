@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { getFeedback, getFeedbackCsv, updateFeedbackStatus } from "../api";
 import { maskIdentifier } from "../identifier";
 import { sortFeedbackNewestFirst } from "../inbox";
+import { FeedbackText } from "../components/FeedbackText";
 
 const FILTER_CATEGORIES = ["Estate", "Transport", "Environment", "Other"];
 const FILTER_STATUSES = ["New", "In review", "Closed"];
@@ -152,7 +153,7 @@ export function AdminPage({ user }) {
                 <div className="feedback-meta">
                   {item.name} · {maskIdentifier(item.nric)} · {item.category ?? "Uncategorised"} · {new Date(item.createdAt).toLocaleDateString()}
                 </div>
-                <p>{item.message}</p>
+                <FeedbackText message={item.message} />
               </div>
               <label className="status-control">
                 <span className="visually-hidden">Status for feedback from {item.name}</span>
