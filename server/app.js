@@ -8,6 +8,7 @@ import { verifyPassword } from "./lib/passwords.js";
 import { sendError } from "./lib/errors.js";
 import { toCsv } from "./lib/csv.js";
 import { normalizeFeedbackText } from "./lib/feedback-text.js";
+import { createFeedbackCategorizer } from "./lib/categorize.js";
 
 function getFilteredFeedback(feedback, { category, status, query }) {
   let filtered = [...feedback].sort(
@@ -46,6 +47,7 @@ function paginateFeedback(feedback, requestedPage) {
 export async function createApp(options = {}) {
   const db = options.db ?? (await createDb());
   const loginRateLimiter = options.loginRateLimiter ?? createLoginRateLimiter(options.loginRateLimitOptions);
+  const categorizeFeedback = options.categorizeFeedback ?? createFeedbackCategorizer();
   const app = express();
   app.use(cors());
   app.use(express.json());
@@ -136,8 +138,9 @@ export async function createApp(options = {}) {
     if (!isFeedbackCategory(category)) {
       return sendError(res, 400, "INVALID_CATEGORY", "Choose a valid feedback category.");
     }
+    const normalizedMessage = normalizeFeedbackText(message);
     const feedback = {
-      id: crypto.randomUUID(), reference: `CV-${crypto.randomInt(100000, 1000000)}`, nric, name, message: normalizeFeedbackText(message), category, status: "New",
+      id: crypto.randomUUID(), reference: `CV-${crypto.randomInt(100000, 1000000)}`, nric, name, message: normalizedMessage, category: await categorizeFeedback(normalizedMessage), status: "New",
       createdAt: new Date().toISOString(),
     };
     db.data.feedback.unshift(feedback);

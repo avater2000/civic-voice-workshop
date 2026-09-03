@@ -2,7 +2,7 @@ import { mkdtemp } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import request from "supertest";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { createApp } from "./app.js";
 import { createDb } from "./lib/db.js";
 
@@ -66,7 +66,8 @@ describe("CivicVoice baseline API", () => {
   });
 
   it("accepts feedback with a supported category", async () => {
-    const app = await testApp();
+    const categorizeFeedback = vi.fn().mockResolvedValue("Transport");
+    const app = await testApp({ categorizeFeedback });
     const response = await request(app).post("/api/feedback").send({
       nric: "S0000001A", name: "Aisha Rahman", message: "Please add more benches.", category: "Estate",
     });
@@ -74,7 +75,8 @@ describe("CivicVoice baseline API", () => {
     expect(response.body.feedback.message).toBe("Please add more benches.");
     expect(response.body.feedback.reference).toMatch(/^CV-\d{6}$/);
     expect(response.body.feedback.reference).not.toBe(response.body.feedback.id);
-    expect(response.body.feedback.category).toBe("Estate");
+    expect(response.body.feedback.category).toBe("Transport");
+    expect(categorizeFeedback).toHaveBeenCalledWith("Please add more benches.");
   });
 
   it("normalizes markup-looking feedback before it is stored", async () => {
