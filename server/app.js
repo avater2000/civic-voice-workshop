@@ -23,9 +23,24 @@ function getFilteredFeedback(feedback, { category, status, query }) {
 }
 
 const FEEDBACK_STATUSES = new Set(["New", "In review", "Closed"]);
+const FEEDBACK_PAGE_SIZE = 10;
 
 function isAdminRequest(req) {
   return req.header("x-user-role") === "admin";
+}
+
+function paginateFeedback(feedback, requestedPage) {
+  const total = feedback.length;
+  const totalPages = Math.max(1, Math.ceil(total / FEEDBACK_PAGE_SIZE));
+  const parsedPage = Number.parseInt(requestedPage, 10);
+  const page = Number.isInteger(parsedPage) && parsedPage > 0
+    ? Math.min(parsedPage, totalPages)
+    : 1;
+  const start = (page - 1) * FEEDBACK_PAGE_SIZE;
+  return {
+    feedback: feedback.slice(start, start + FEEDBACK_PAGE_SIZE),
+    pagination: { page, pageSize: FEEDBACK_PAGE_SIZE, total, totalPages },
+  };
 }
 
 export async function createApp(options = {}) {
@@ -67,7 +82,7 @@ export async function createApp(options = {}) {
       return sendError(res, 403, "FORBIDDEN", "Admin access required.");
     }
     const feedback = getFilteredFeedback(db.data.feedback, req.query);
-    return res.json({ feedback });
+    return res.json(paginateFeedback(feedback, req.query.page));
   });
 
   app.get("/api/feedback/export.csv", (req, res) => {

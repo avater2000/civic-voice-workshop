@@ -195,6 +195,30 @@ describe("CivicVoice baseline API", () => {
     expect(response.body.feedback.map((item) => item.id)).toEqual(["estate-closed"]);
   });
 
+  it("paginates filtered feedback in groups of ten and clamps invalid pages", async () => {
+    const directory = await mkdtemp(path.join(os.tmpdir(), "civic-voice-"));
+    const db = await createDb(path.join(directory, "db.json"));
+    db.data.feedback = Array.from({ length: 23 }, (_, index) => ({
+      id: `feedback-${index + 1}`,
+      category: "Estate",
+      status: "New",
+      createdAt: new Date(Date.UTC(2026, 0, index + 1)).toISOString(),
+    }));
+    await db.write();
+    const app = await createApp({ db });
+
+    const secondPage = await request(app).get("/api/feedback?category=Estate&page=2").set("x-user-role", "admin");
+    expect(secondPage.body.pagination).toEqual({ page: 2, pageSize: 10, total: 23, totalPages: 3 });
+    expect(secondPage.body.feedback.map((item) => item.id)).toEqual([
+      "feedback-13", "feedback-12", "feedback-11", "feedback-10", "feedback-9",
+      "feedback-8", "feedback-7", "feedback-6", "feedback-5", "feedback-4",
+    ]);
+
+    const finalPage = await request(app).get("/api/feedback?page=99").set("x-user-role", "admin");
+    expect(finalPage.body.pagination.page).toBe(3);
+    expect(finalPage.body.feedback).toHaveLength(3);
+  });
+
   it("exports filtered feedback as safely quoted CSV", async () => {
     const directory = await mkdtemp(path.join(os.tmpdir(), "civic-voice-"));
     const db = await createDb(path.join(directory, "db.json"));

@@ -13,6 +13,8 @@ export function AdminPage({ user }) {
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("");
   const [status, setStatus] = useState("");
+  const [page, setPage] = useState(1);
+  const [pagination, setPagination] = useState({ page: 1, total: 0, totalPages: 1 });
   const [isLoading, setIsLoading] = useState(true);
   const [isExporting, setIsExporting] = useState(false);
   const [exportError, setExportError] = useState("");
@@ -23,15 +25,18 @@ export function AdminPage({ user }) {
     setIsLoading(true);
     setError("");
 
-    return getFeedback(user, { category, status })
-      .then((response) => setFeedback(sortFeedbackNewestFirst(response.feedback)))
+    return getFeedback(user, { category, status, page })
+      .then((response) => {
+        setFeedback(sortFeedbackNewestFirst(response.feedback));
+        setPagination(response.pagination ?? { page: 1, total: response.feedback.length, totalPages: 1 });
+      })
       .catch((requestError) => setError(requestError.message || "We could not load the feedback inbox."))
       .finally(() => setIsLoading(false));
   };
 
   useEffect(() => {
     loadFeedback();
-  }, [user, category, status]);
+  }, [user, category, status, page]);
 
   async function updateStatus(feedbackId, status) {
     setStatusError("");
@@ -59,6 +64,17 @@ export function AdminPage({ user }) {
   function clearFilters() {
     setCategory("");
     setStatus("");
+    setPage(1);
+  }
+
+  function updateCategory(nextCategory) {
+    setCategory(nextCategory);
+    setPage(1);
+  }
+
+  function updateFilterStatus(nextStatus) {
+    setStatus(nextStatus);
+    setPage(1);
   }
 
   async function exportFeedback() {
@@ -104,14 +120,14 @@ export function AdminPage({ user }) {
         <section className="inbox-filters" aria-label="Inbox filters">
           <label>
             Category
-            <select value={category} onChange={(event) => setCategory(event.target.value)}>
+            <select value={category} onChange={(event) => updateCategory(event.target.value)}>
               <option value="">All categories</option>
               {FILTER_CATEGORIES.map((filterCategory) => <option key={filterCategory} value={filterCategory}>{filterCategory}</option>)}
             </select>
           </label>
           <label>
             Status
-            <select value={status} onChange={(event) => setStatus(event.target.value)}>
+            <select value={status} onChange={(event) => updateFilterStatus(event.target.value)}>
               <option value="">All statuses</option>
               {FILTER_STATUSES.map((filterStatus) => <option key={filterStatus} value={filterStatus}>{filterStatus}</option>)}
             </select>
@@ -134,7 +150,7 @@ export function AdminPage({ user }) {
           <div className="list-header">
             <strong>Latest feedback</strong>
             <div className="list-actions">
-              <span>{visibleFeedback.length} items</span>
+              <span>{pagination.total} items</span>
               <button className="text-button" type="button" onClick={exportFeedback} disabled={isExporting || visibleFeedback.length === 0}>
                 {isExporting ? "Preparing CSV…" : "Download CSV"}
               </button>
@@ -169,6 +185,15 @@ export function AdminPage({ user }) {
               </label>
             </article>
           ))}
+          <nav className="pagination" aria-label="Feedback pages">
+            <button type="button" className="text-button" disabled={pagination.page <= 1} onClick={() => setPage((currentPage) => currentPage - 1)}>
+              Previous
+            </button>
+            <span>Page {pagination.page} of {pagination.totalPages}</span>
+            <button type="button" className="text-button" disabled={pagination.page >= pagination.totalPages} onClick={() => setPage((currentPage) => currentPage + 1)}>
+              Next
+            </button>
+          </nav>
         </section>
       </>}
     </main>
