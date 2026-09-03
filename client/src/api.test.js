@@ -30,11 +30,11 @@ describe("API health checks", () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
       ok: false,
       status: 429,
-      json: async () => ({ error: "Too many failed sign-in attempts." }),
+      json: async () => ({ error: { code: "RATE_LIMITED", message: "Too many failed sign-in attempts." } }),
     }));
 
     await expect(login({})).rejects.toMatchObject({
-      name: "Error", status: 429, message: "Too many failed sign-in attempts.",
+      name: "Error", status: 429, code: "RATE_LIMITED", message: "Too many failed sign-in attempts.",
     });
     await expect(login({})).rejects.toBeInstanceOf(ApiError);
   });
