@@ -26,6 +26,10 @@ export function getHealthStatus() {
 export function submitFeedback(feedback) {
   return api("/api/feedback", { method: "POST", body: JSON.stringify(feedback) });
 }
-export function getFeedback(user) {
-  return api("/api/feedback", { headers: { "x-user-role": user.role } });
+export function getFeedback(user, filters = {}) {
+  const parameters = new URLSearchParams();
+  if (filters.category) parameters.set("category", filters.category);
+  if (filters.status) parameters.set("status", filters.status);
+  const query = parameters.size ? `?${parameters}` : "";
+  return api(`/api/feedback${query}`, { headers: { "x-user-role": user.role } });
 }

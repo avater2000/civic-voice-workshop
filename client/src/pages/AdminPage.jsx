@@ -3,17 +3,22 @@ import { getFeedback } from "../api";
 import { maskIdentifier } from "../identifier";
 import { sortFeedbackNewestFirst } from "../inbox";
 
+const FILTER_CATEGORIES = ["Estate", "Transport", "Environment", "Other"];
+const FILTER_STATUSES = ["New", "In review", "Closed"];
+
 export function AdminPage({ user }) {
   const [feedback, setFeedback] = useState([]);
   const [error, setError] = useState("");
   const [query, setQuery] = useState("");
+  const [category, setCategory] = useState("");
+  const [status, setStatus] = useState("");
   const [isLoading, setIsLoading] = useState(true);
 
   const loadFeedback = () => {
     setIsLoading(true);
     setError("");
 
-    return getFeedback(user)
+    return getFeedback(user, { category, status })
       .then((response) => setFeedback(sortFeedbackNewestFirst(response.feedback)))
       .catch((requestError) => setError(requestError.message || "We could not load the feedback inbox."))
       .finally(() => setIsLoading(false));
@@ -21,7 +26,7 @@ export function AdminPage({ user }) {
 
   useEffect(() => {
     loadFeedback();
-  }, [user]);
+  }, [user, category, status]);
 
   const visibleFeedback = feedback.filter((item) => {
     const searchableText = `${item.name} ${item.message}`.toLowerCase();
@@ -31,6 +36,12 @@ export function AdminPage({ user }) {
     status,
     count: feedback.filter((item) => item.status === status).length,
   }));
+  const hasActiveFilters = Boolean(category || status);
+
+  function clearFilters() {
+    setCategory("");
+    setStatus("");
+  }
 
   return (
     <main className="page-shell admin-shell">
@@ -53,10 +64,29 @@ export function AdminPage({ user }) {
           <button className="primary-button" type="button" onClick={loadFeedback}>Try again</button>
         </section>
       )}
+      {!isLoading && !error && (
+        <section className="inbox-filters" aria-label="Inbox filters">
+          <label>
+            Category
+            <select value={category} onChange={(event) => setCategory(event.target.value)}>
+              <option value="">All categories</option>
+              {FILTER_CATEGORIES.map((filterCategory) => <option key={filterCategory} value={filterCategory}>{filterCategory}</option>)}
+            </select>
+          </label>
+          <label>
+            Status
+            <select value={status} onChange={(event) => setStatus(event.target.value)}>
+              <option value="">All statuses</option>
+              {FILTER_STATUSES.map((filterStatus) => <option key={filterStatus} value={filterStatus}>{filterStatus}</option>)}
+            </select>
+          </label>
+          {hasActiveFilters && <button className="text-button clear-filters" type="button" onClick={clearFilters}>Clear filters</button>}
+        </section>
+      )}
       {!isLoading && !error && feedback.length === 0 && (
         <section className="inbox-state">
-          <h2>No feedback yet</h2>
-          <p>New feedback from the public will appear here.</p>
+          <h2>{hasActiveFilters ? "No matching feedback" : "No feedback yet"}</h2>
+          <p>{hasActiveFilters ? "Try clearing a filter to view all feedback." : "New feedback from the public will appear here."}</p>
         </section>
       )}
       {!isLoading && !error && feedback.length > 0 && <>

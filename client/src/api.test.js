@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { ApiError, getHealthStatus, login } from "./api";
+import { ApiError, getFeedback, getHealthStatus, login } from "./api";
 
 describe("API health checks", () => {
   afterEach(() => vi.unstubAllGlobals());
@@ -37,5 +37,16 @@ describe("API health checks", () => {
       name: "Error", status: 429, message: "Too many failed sign-in attempts.",
     });
     await expect(login({})).rejects.toBeInstanceOf(ApiError);
+  });
+
+  it("sends active inbox filters as query parameters", async () => {
+    const fetch = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ feedback: [] }) });
+    vi.stubGlobal("fetch", fetch);
+
+    await expect(getFeedback({ role: "admin" }, { category: "Estate", status: "In review" })).resolves.toEqual({ feedback: [] });
+    expect(fetch).toHaveBeenCalledWith(
+      "http://localhost:3001/api/feedback?category=Estate&status=In+review",
+      expect.objectContaining({ headers: expect.objectContaining({ "x-user-role": "admin" }) }),
+    );
   });
 });

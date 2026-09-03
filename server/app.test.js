@@ -118,4 +118,23 @@ describe("CivicVoice baseline API", () => {
     expect(response.status).toBe(200);
     expect(response.body.feedback.map((item) => item.id)).toEqual(["new", "middle", "old"]);
   });
+
+  it("combines category and status filters for the admin inbox", async () => {
+    const directory = await mkdtemp(path.join(os.tmpdir(), "civic-voice-"));
+    const db = await createDb(path.join(directory, "db.json"));
+    db.data.feedback = [
+      { id: "estate-new", category: "Estate", status: "New", createdAt: "2026-08-03T10:00:00.000Z" },
+      { id: "estate-closed", category: "Estate", status: "Closed", createdAt: "2026-08-02T10:00:00.000Z" },
+      { id: "transport-closed", category: "Transport", status: "Closed", createdAt: "2026-08-01T10:00:00.000Z" },
+    ];
+    await db.write();
+    const app = await createApp({ db });
+
+    const response = await request(app)
+      .get("/api/feedback?category=Estate&status=Closed")
+      .set("x-user-role", "admin");
+
+    expect(response.status).toBe(200);
+    expect(response.body.feedback.map((item) => item.id)).toEqual(["estate-closed"]);
+  });
 });
