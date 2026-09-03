@@ -49,6 +49,13 @@ textarea { resize: vertical; line-height: 1.6; }
 .success-banner { background: #e8f4ec; color: #26703b; border-radius: 8px; padding: 13px 15px; margin-bottom: 20px; font-size: 14px; }
 .submission-success { display: grid; gap: 4px; justify-items: start; }
 .admin-shell { max-width: 1050px; }
+.inbox-state { display: grid; justify-items: start; gap: 8px; min-height: 230px; align-content: center; padding: 32px; background: white; border: 1px solid #e2dfd7; border-radius: 14px; box-shadow: 0 8px 30px rgba(28,36,42,.04); }
+.inbox-state h2 { margin: 0; font-size: 28px; }
+.inbox-state p { max-width: 430px; margin: 0; color: #69747b; line-height: 1.6; }
+.inbox-state .primary-button { margin-top: 10px; }
+.inbox-error { border-color: #e7b9bb; }
+.loading-indicator { width: 28px; height: 28px; margin-bottom: 5px; border: 3px solid #ead3d3; border-top-color: #b2252a; border-radius: 50%; animation: spin .8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
 .inbox-summary { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin: 0 0 24px; }
 .summary-card { display: grid; gap: 6px; padding: 16px; border: 1px solid #e2dfd7; border-radius: 10px; background: white; color: #69747b; font-size: 13px; }
 .summary-card strong { color: #17222b; font-size: 26px; }
