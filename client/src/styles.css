@@ -49,6 +49,9 @@ textarea { resize: vertical; line-height: 1.6; }
 .success-banner { background: #e8f4ec; color: #26703b; border-radius: 8px; padding: 13px 15px; margin-bottom: 20px; font-size: 14px; }
 .submission-success { display: grid; gap: 4px; justify-items: start; }
 .admin-shell { max-width: 1050px; }
+.inbox-summary { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin: 0 0 24px; }
+.summary-card { display: grid; gap: 6px; padding: 16px; border: 1px solid #e2dfd7; border-radius: 10px; background: white; color: #69747b; font-size: 13px; }
+.summary-card strong { color: #17222b; font-size: 26px; }
 .list-header { display: flex; justify-content: space-between; padding-bottom: 18px; border-bottom: 1px solid #eceae4; }
 .list-header span { color: #69747b; font-size: 14px; }
 .feedback-row { display: flex; justify-content: space-between; gap: 24px; padding: 20px 0; border-bottom: 1px solid #eceae4; }
@@ -64,6 +67,7 @@ textarea { resize: vertical; line-height: 1.6; }
   .site-header { padding: 0 20px; }
   .signed-in { display: none; }
   .form-footer { align-items: stretch; flex-direction: column; }
+  .inbox-summary { grid-template-columns: repeat(2, 1fr); }
   .form-actions { align-items: stretch; flex-direction: column; gap: 10px; }
   .form-footer .primary-button { width: 100%; }
 }
