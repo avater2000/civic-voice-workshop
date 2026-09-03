@@ -38,7 +38,9 @@ describe("CivicVoice baseline API", () => {
     const limited = await request(app).post("/api/login").send(invalidLogin);
     expect(limited.status).toBe(429);
     expect(limited.headers["retry-after"]).toBeDefined();
-    expect(limited.body.error).toMatch(/too many failed/i);
+    expect(limited.body.error).toEqual(expect.objectContaining({
+      code: "RATE_LIMITED", message: expect.stringMatching(/too many failed/i),
+    }));
 
     const validLogin = await request(app).post("/api/login").send({
       nric: "S0000001A", password: "citizen123", role: "citizen",
@@ -83,7 +85,9 @@ describe("CivicVoice baseline API", () => {
         nric: "S0000001A", name: "Aisha Rahman", message,
       });
       expect(response.status).toBe(400);
-      expect(response.body.error).toMatch(/more than spaces/i);
+      expect(response.body.error).toEqual({
+        code: "INVALID_FEEDBACK", message: "Please enter feedback that is more than spaces or line breaks.",
+      });
     }
   });
 
@@ -93,13 +97,27 @@ describe("CivicVoice baseline API", () => {
       nric: "S0000001A", name: "Aisha Rahman", message: "Please add more benches.", category: "General",
     });
     expect(response.status).toBe(400);
-    expect(response.body.error).toBe("Choose a valid feedback category.");
+    expect(response.body.error).toEqual({
+      code: "INVALID_CATEGORY", message: "Choose a valid feedback category.",
+    });
   });
 
   it("blocks the feedback list without the admin role header", async () => {
     const app = await testApp();
     const response = await request(app).get("/api/feedback");
     expect(response.status).toBe(403);
+    expect(response.body.error).toEqual({ code: "FORBIDDEN", message: "Admin access required." });
+  });
+
+  it("uses structured errors for invalid login and unknown routes", async () => {
+    const app = await testApp();
+    const login = await request(app).post("/api/login").send({ nric: "S0000001A", password: "bad", role: "citizen" });
+    const unknown = await request(app).get("/api/unknown");
+
+    expect(login.status).toBe(401);
+    expect(login.body.error).toEqual({ code: "INVALID_CREDENTIALS", message: "Invalid NRIC, password, or sign-in mode." });
+    expect(unknown.status).toBe(404);
+    expect(unknown.body.error).toEqual({ code: "NOT_FOUND", message: "API route not found." });
   });
 
   it("returns feedback newest first when stored records are out of order", async () => {

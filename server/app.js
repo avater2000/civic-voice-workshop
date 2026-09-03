@@ -5,6 +5,7 @@ import { createDb } from "./lib/db.js";
 import { isFeedbackCategory } from "./lib/categories.js";
 import { createLoginRateLimiter } from "./lib/login-rate-limiter.js";
 import { verifyPassword } from "./lib/passwords.js";
+import { sendError } from "./lib/errors.js";
 
 export async function createApp(options = {}) {
   const db = options.db ?? (await createDb());
@@ -26,12 +27,11 @@ export async function createApp(options = {}) {
     if (!user) {
       const retryAfter = loginRateLimiter.isLimited(rateLimitKey);
       if (retryAfter) {
-        return res.status(429).set("Retry-After", String(retryAfter)).json({
-          error: `Too many failed sign-in attempts. Try again in ${retryAfter} seconds.`,
-        });
+        res.set("Retry-After", String(retryAfter));
+        return sendError(res, 429, "RATE_LIMITED", `Too many failed sign-in attempts. Try again in ${retryAfter} seconds.`);
       }
       loginRateLimiter.recordFailure(rateLimitKey);
-      return res.status(401).json({ error: "Invalid NRIC, password, or sign-in mode." });
+      return sendError(res, 401, "INVALID_CREDENTIALS", "Invalid NRIC, password, or sign-in mode.");
     }
 
     loginRateLimiter.clear(rateLimitKey);
@@ -43,7 +43,7 @@ export async function createApp(options = {}) {
 
   app.get("/api/feedback", (req, res) => {
     if (req.header("x-user-role") !== "admin") {
-      return res.status(403).json({ error: "Admin access required." });
+      return sendError(res, 403, "FORBIDDEN", "Admin access required.");
     }
     const feedback = [...db.data.feedback].sort(
       (first, second) => new Date(second.createdAt) - new Date(first.createdAt),
@@ -54,10 +54,10 @@ export async function createApp(options = {}) {
   app.post("/api/feedback", async (req, res) => {
     const { nric, name, message, category } = req.body ?? {};
     if (typeof message !== "string" || !message.trim()) {
-      return res.status(400).json({ error: "Please enter feedback that is more than spaces or line breaks." });
+      return sendError(res, 400, "INVALID_FEEDBACK", "Please enter feedback that is more than spaces or line breaks.");
     }
     if (!isFeedbackCategory(category)) {
-      return res.status(400).json({ error: "Choose a valid feedback category." });
+      return sendError(res, 400, "INVALID_CATEGORY", "Choose a valid feedback category.");
     }
     const feedback = {
       id: crypto.randomUUID(), reference: `CV-${crypto.randomInt(100000, 1000000)}`, nric, name, message, category, status: "New",
@@ -67,6 +67,8 @@ export async function createApp(options = {}) {
     await db.write();
     return res.status(201).json({ feedback });
   });
+
+  app.use((_req, res) => sendError(res, 404, "NOT_FOUND", "API route not found."));
 
   return app;
 }
