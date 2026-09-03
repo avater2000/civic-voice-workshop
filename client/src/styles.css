@@ -58,6 +58,8 @@ textarea { resize: vertical; line-height: 1.6; }
 .character-count { color: var(--muted); white-space: nowrap; }
 .success-banner { background: var(--success-bg); color: var(--success); border-radius: 8px; padding: 13px 15px; margin-bottom: 20px; font-size: 14px; }
 .submission-success { display: grid; gap: 4px; justify-items: start; }
+.submission-reference { margin: 4px 0 16px; color: var(--muted); font-size: 14px; }
+.submission-reference strong { color: var(--text); font-variant-numeric: tabular-nums; }
 .submission-success h2 { margin: 0 0 8px; font-size: 32px; }
 .admin-shell { max-width: 1050px; }
 .inbox-state { display: grid; justify-items: start; gap: 8px; min-height: 230px; align-content: center; padding: 32px; background: white; border: 1px solid #e2dfd7; border-radius: 14px; box-shadow: 0 8px 30px rgba(28,36,42,.04); }
