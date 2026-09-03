@@ -2,9 +2,9 @@
 :root[data-theme="dark"] { color-scheme: dark; --text: #edf1f3; --muted: #b5c0c6; --page: #151b1f; --panel: #1c2429; --surface: #232d33; --line: #3c484f; --subtle-line: #344047; --input: #182126; --switch: #344047; --success-bg: #173d29; --success: #a8e8bc; }
 * { box-sizing: border-box; }
 body { margin: 0; min-width: 320px; background: var(--page); color: var(--text); }
-button, input, textarea { font: inherit; }
+button, input, textarea, select { font: inherit; }
 button { cursor: pointer; }
-button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visible, summary:focus-visible { outline: 3px solid #b2252a; outline-offset: 3px; }
+button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible, summary:focus-visible { outline: 3px solid #b2252a; outline-offset: 3px; }
 .site-header { height: 76px; display: flex; align-items: center; justify-content: space-between; padding: 0 5vw; border-bottom: 1px solid var(--line); background: var(--panel); }
 .brand { display: flex; align-items: center; gap: 10px; color: var(--text); text-decoration: none; font-weight: 700; }
 .brand-mark { width: 29px; height: 29px; display: grid; place-items: center; background: #b2252a; color: #fff; border-radius: 8px; font-family: Fraunces, serif; }
@@ -36,8 +36,8 @@ h1, h2 { font-family: Fraunces, Georgia, serif; letter-spacing: -.04em; }
 .role-switch button { border: 0; border-radius: 6px; padding: 10px; color: var(--muted); background: transparent; }
 .role-switch button.active { background: var(--surface); color: var(--text); font-weight: 700; box-shadow: 0 1px 3px rgba(0,0,0,.18); }
 label { display: grid; gap: 8px; margin: 15px 0; color: var(--text); font-size: 14px; font-weight: 600; }
-input, textarea { width: 100%; border: 1px solid var(--line); border-radius: 8px; background: var(--input); color: var(--text); padding: 13px 14px; outline: none; }
-input:focus, textarea:focus { border-color: #b2252a; box-shadow: 0 0 0 3px rgba(178,37,42,.1); }
+input, textarea, select { width: 100%; border: 1px solid var(--line); border-radius: 8px; background: var(--input); color: var(--text); padding: 13px 14px; outline: none; }
+input:focus, textarea:focus, select:focus { border-color: #b2252a; box-shadow: 0 0 0 3px rgba(178,37,42,.1); }
 textarea { resize: vertical; line-height: 1.6; }
 .primary-button { border: 0; background: #b2252a; color: white; border-radius: 8px; padding: 13px 18px; font-weight: 700; min-width: 145px; }
 .primary-button:hover { background: #8f1b20; }
