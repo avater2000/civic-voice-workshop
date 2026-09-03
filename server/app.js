@@ -4,6 +4,7 @@ import cors from "cors";
 import { createDb } from "./lib/db.js";
 import { isFeedbackCategory } from "./lib/categories.js";
 import { createLoginRateLimiter } from "./lib/login-rate-limiter.js";
+import { verifyPassword } from "./lib/passwords.js";
 
 export async function createApp(options = {}) {
   const db = options.db ?? (await createDb());
@@ -20,7 +21,7 @@ export async function createApp(options = {}) {
     const { nric, password, role } = req.body ?? {};
     const rateLimitKey = req.ip;
     const user = db.data.users.find(
-      (candidate) => candidate.nric === nric && candidate.password === password && candidate.role === role,
+      (candidate) => candidate.nric === nric && candidate.role === role && verifyPassword(password, candidate.passwordHash),
     );
     if (!user) {
       const retryAfter = loginRateLimiter.isLimited(rateLimitKey);
