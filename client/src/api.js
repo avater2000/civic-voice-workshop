@@ -54,3 +54,10 @@ export function getFeedback(user, filters = {}) {
 export function getFeedbackCsv(user, filters = {}) {
   return csvApi(`/api/feedback/export.csv${feedbackQuery(filters)}`, { headers: { "x-user-role": user.role } });
 }
+export function updateFeedbackStatus(user, feedbackId, status) {
+  return api(`/api/feedback/${feedbackId}/status`, {
+    method: "PATCH",
+    headers: { "x-user-role": user.role },
+    body: JSON.stringify({ status }),
+  });
+}

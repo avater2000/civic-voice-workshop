@@ -21,6 +21,12 @@ function getFilteredFeedback(feedback, { category, status, query }) {
   return filtered;
 }
 
+const FEEDBACK_STATUSES = new Set(["New", "In review", "Closed"]);
+
+function isAdminRequest(req) {
+  return req.header("x-user-role") === "admin";
+}
+
 export async function createApp(options = {}) {
   const db = options.db ?? (await createDb());
   const loginRateLimiter = options.loginRateLimiter ?? createLoginRateLimiter(options.loginRateLimitOptions);
@@ -56,7 +62,7 @@ export async function createApp(options = {}) {
   });
 
   app.get("/api/feedback", (req, res) => {
-    if (req.header("x-user-role") !== "admin") {
+    if (!isAdminRequest(req)) {
       return sendError(res, 403, "FORBIDDEN", "Admin access required.");
     }
     const feedback = getFilteredFeedback(db.data.feedback, req.query);
@@ -64,7 +70,7 @@ export async function createApp(options = {}) {
   });
 
   app.get("/api/feedback/export.csv", (req, res) => {
-    if (req.header("x-user-role") !== "admin") {
+    if (!isAdminRequest(req)) {
       return sendError(res, 403, "FORBIDDEN", "Admin access required.");
     }
     const feedback = getFilteredFeedback(db.data.feedback, req.query);
@@ -75,6 +81,24 @@ export async function createApp(options = {}) {
     res.type("text/csv");
     res.attachment("civicvoice-feedback.csv");
     return res.send(toCsv(rows));
+  });
+
+  app.patch("/api/feedback/:id/status", async (req, res) => {
+    if (!isAdminRequest(req)) {
+      return sendError(res, 403, "FORBIDDEN", "Admin access required.");
+    }
+
+    const { status } = req.body ?? {};
+    if (!FEEDBACK_STATUSES.has(status)) {
+      return sendError(res, 400, "INVALID_STATUS", "Choose a valid feedback status.");
+    }
+
+    const feedback = db.data.feedback.find((item) => item.id === req.params.id);
+    if (!feedback) return sendError(res, 404, "NOT_FOUND", "Feedback not found.");
+
+    feedback.status = status;
+    await db.write();
+    return res.json({ feedback });
   });
 
   app.post("/api/feedback", async (req, res) => {
