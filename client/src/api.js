@@ -49,20 +49,20 @@ export function getHealthStatus() {
 export function submitFeedback(feedback) {
   return api("/api/feedback", { method: "POST", body: JSON.stringify(feedback) });
 }
-export function getFeedback(user, filters = {}) {
-  return api(`/api/feedback${feedbackQuery(filters)}`, { headers: { "x-user-role": user.role } });
+export function getFeedback(session, filters = {}) {
+  return api(`/api/feedback${feedbackQuery(filters)}`, { headers: { Authorization: `Bearer ${session.token}` } });
 }
-export function getFeedbackCsv(user, filters = {}) {
-  return csvApi(`/api/feedback/export.csv${feedbackQuery(filters)}`, { headers: { "x-user-role": user.role } });
+export function getFeedbackCsv(session, filters = {}) {
+  return csvApi(`/api/feedback/export.csv${feedbackQuery(filters)}`, { headers: { Authorization: `Bearer ${session.token}` } });
 }
-export function updateFeedbackStatus(user, feedbackId, status) {
+export function updateFeedbackStatus(session, feedbackId, status) {
   return api(`/api/feedback/${feedbackId}/status`, {
     method: "PATCH",
-    headers: { "x-user-role": user.role },
+    headers: { Authorization: `Bearer ${session.token}` },
     body: JSON.stringify({ status }),
   });
 }
 
-export function getFeedbackDetail(user, id) {
-  return api(`/api/feedback/${encodeURIComponent(id)}`, { headers: { "x-user-role": user.role } });
+export function getFeedbackDetail(session, id) {
+  return api(`/api/feedback/${encodeURIComponent(id)}`, { headers: { Authorization: `Bearer ${session.token}` } });
 }

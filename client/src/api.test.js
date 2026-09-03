@@ -43,10 +43,10 @@ describe("API health checks", () => {
     const fetch = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ feedback: [] }) });
     vi.stubGlobal("fetch", fetch);
 
-    await expect(getFeedback({ role: "admin" }, { category: "Estate", status: "In review" })).resolves.toEqual({ feedback: [] });
+    await expect(getFeedback({ token: "session-token", user: { role: "admin" } }, { category: "Estate", status: "In review" })).resolves.toEqual({ feedback: [] });
     expect(fetch).toHaveBeenCalledWith(
       "http://localhost:3001/api/feedback?category=Estate&status=In+review",
-      expect.objectContaining({ headers: expect.objectContaining({ "x-user-role": "admin" }) }),
+      expect.objectContaining({ headers: expect.objectContaining({ Authorization: "Bearer session-token" }) }),
     );
   });
 
@@ -54,21 +54,21 @@ describe("API health checks", () => {
     const fetch = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ feedback: [], pagination: {} }) });
     vi.stubGlobal("fetch", fetch);
 
-    await getFeedback({ role: "admin" }, { category: "Estate", page: 2 });
+    await getFeedback({ token: "session-token", user: { role: "admin" } }, { category: "Estate", page: 2 });
     expect(fetch).toHaveBeenCalledWith(
       "http://localhost:3001/api/feedback?category=Estate&page=2",
-      expect.any(Object),
+      expect.objectContaining({ headers: expect.objectContaining({ Authorization: "Bearer session-token" }) }),
     );
   });
 
-  it("requests CSV with all active filters and the admin role", async () => {
+  it("requests CSV with all active filters and the admin token", async () => {
     const fetch = vi.fn().mockResolvedValue({ ok: true, blob: async () => new Blob(["csv"]) });
     vi.stubGlobal("fetch", fetch);
 
-    await expect(getFeedbackCsv({ role: "admin" }, { category: "Estate", status: "New", query: "bench" })).resolves.toBeInstanceOf(Blob);
+    await expect(getFeedbackCsv({ token: "session-token", user: { role: "admin" } }, { category: "Estate", status: "New", query: "bench" })).resolves.toBeInstanceOf(Blob);
     expect(fetch).toHaveBeenCalledWith(
       "http://localhost:3001/api/feedback/export.csv?category=Estate&status=New&query=bench",
-      { headers: { "x-user-role": "admin" } },
+      { headers: { Authorization: "Bearer session-token" } },
     );
   });
 
@@ -79,23 +79,37 @@ describe("API health checks", () => {
     });
     vi.stubGlobal("fetch", fetch);
 
-    await expect(updateFeedbackStatus({ role: "admin" }, "fb-1", "Closed"))
+    await expect(updateFeedbackStatus({ token: "session-token", user: { role: "admin" } }, "fb-1", "Closed"))
       .resolves.toMatchObject({ feedback: { status: "Closed" } });
     expect(fetch).toHaveBeenCalledWith("http://localhost:3001/api/feedback/fb-1/status", expect.objectContaining({
       method: "PATCH",
-      headers: expect.objectContaining({ "x-user-role": "admin" }),
+      headers: expect.objectContaining({ Authorization: "Bearer session-token" }),
       body: JSON.stringify({ status: "Closed" }),
     }));
   });
 
-  it("requests a selected feedback record with the admin credentials", async () => {
+  it("requests a selected feedback record with the admin token", async () => {
     const fetch = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ feedback: { id: "feedback/1" } }) });
     vi.stubGlobal("fetch", fetch);
 
-    await expect(getFeedbackDetail({ role: "admin" }, "feedback/1")).resolves.toEqual({ feedback: { id: "feedback/1" } });
+    await expect(getFeedbackDetail({ token: "session-token", user: { role: "admin" } }, "feedback/1")).resolves.toEqual({ feedback: { id: "feedback/1" } });
     expect(fetch).toHaveBeenCalledWith(
       "http://localhost:3001/api/feedback/feedback%2F1",
-      expect.objectContaining({ headers: expect.objectContaining({ "x-user-role": "admin" }) }),
+      expect.objectContaining({ headers: expect.objectContaining({ Authorization: "Bearer session-token" }) }),
     );
+  });
+
+  it("uses the server-issued token for admin feedback requests", async () => {
+    const fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ feedback: [] }),
+    });
+    vi.stubGlobal("fetch", fetch);
+
+    await getFeedback({ token: "session-token", user: { role: "admin" } });
+
+    expect(fetch).toHaveBeenCalledWith("http://localhost:3001/api/feedback", expect.objectContaining({
+      headers: expect.objectContaining({ Authorization: "Bearer session-token" }),
+    }));
   });
 });

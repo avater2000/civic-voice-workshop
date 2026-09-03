@@ -26,6 +26,21 @@ describe("CivicVoice baseline API", () => {
     });
     expect(response.status).toBe(200);
     expect(response.body.user.role).toBe("citizen");
+    expect(response.body.token).toEqual(expect.any(String));
+  });
+
+  it("allows an admin session token to read feedback", async () => {
+    const app = await testApp();
+    const loginResponse = await request(app).post("/api/login").send({
+      nric: "S0000002B", password: "admin123", role: "admin",
+    });
+
+    const response = await request(app)
+      .get("/api/feedback")
+      .set("Authorization", `Bearer ${loginResponse.body.token}`);
+
+    expect(response.status).toBe(200);
+    expect(response.body.feedback).toEqual(expect.any(Array));
   });
 
   it("rate-limits repeated failed sign-ins without blocking correct credentials", async () => {
@@ -117,7 +132,7 @@ describe("CivicVoice baseline API", () => {
     });
   });
 
-  it("blocks the feedback list without the admin role header", async () => {
+  it("blocks the feedback list without an admin session token", async () => {
     const app = await testApp();
     const response = await request(app).get("/api/feedback");
     expect(response.status).toBe(403);
@@ -126,10 +141,17 @@ describe("CivicVoice baseline API", () => {
 
   it("returns a selected feedback record only to an admin", async () => {
     const app = await testApp();
+    const loginResponse = await request(app).post("/api/login").send({
+      nric: "S0000002B", password: "admin123", role: "admin",
+    });
 
     const forbidden = await request(app).get("/api/feedback/fb-seed-1");
-    const response = await request(app).get("/api/feedback/fb-seed-1").set("x-user-role", "admin");
-    const missing = await request(app).get("/api/feedback/missing").set("x-user-role", "admin");
+    const response = await request(app)
+      .get("/api/feedback/fb-seed-1")
+      .set("Authorization", `Bearer ${loginResponse.body.token}`);
+    const missing = await request(app)
+      .get("/api/feedback/missing")
+      .set("Authorization", `Bearer ${loginResponse.body.token}`);
 
     expect(forbidden.status).toBe(403);
     expect(response.status).toBe(200);
@@ -156,10 +178,13 @@ describe("CivicVoice baseline API", () => {
     const db = await createDb(path.join(directory, "db.json"));
     const app = await createApp({ db });
     const feedback = db.data.feedback[0];
+    const loginResponse = await request(app).post("/api/login").send({
+      nric: "S0000002B", password: "admin123", role: "admin",
+    });
 
     const response = await request(app)
       .patch(`/api/feedback/${feedback.id}/status`)
-      .set("x-user-role", "admin")
+      .set("Authorization", `Bearer ${loginResponse.body.token}`)
       .send({ status: "In review" });
 
     expect(response.status).toBe(200);
@@ -170,10 +195,13 @@ describe("CivicVoice baseline API", () => {
   it("rejects unauthorized or invalid feedback status updates", async () => {
     const app = await testApp();
     const feedbackId = "fb-seed-1";
+    const loginResponse = await request(app).post("/api/login").send({
+      nric: "S0000002B", password: "admin123", role: "admin",
+    });
 
     await expect(request(app).patch(`/api/feedback/${feedbackId}/status`).send({ status: "Closed" }))
       .resolves.toMatchObject({ status: 403 });
-    await expect(request(app).patch(`/api/feedback/${feedbackId}/status`).set("x-user-role", "admin").send({ status: "Later" }))
+    await expect(request(app).patch(`/api/feedback/${feedbackId}/status`).set("Authorization", `Bearer ${loginResponse.body.token}`).send({ status: "Later" }))
       .resolves.toMatchObject({ status: 400 });
   });
 
@@ -187,8 +215,13 @@ describe("CivicVoice baseline API", () => {
     ];
     await db.write();
     const app = await createApp({ db });
+    const loginResponse = await request(app).post("/api/login").send({
+      nric: "S0000002B", password: "admin123", role: "admin",
+    });
 
-    const response = await request(app).get("/api/feedback").set("x-user-role", "admin");
+    const response = await request(app)
+      .get("/api/feedback")
+      .set("Authorization", `Bearer ${loginResponse.body.token}`);
 
     expect(response.status).toBe(200);
     expect(response.body.feedback.map((item) => item.id)).toEqual(["new", "middle", "old"]);
@@ -204,10 +237,13 @@ describe("CivicVoice baseline API", () => {
     ];
     await db.write();
     const app = await createApp({ db });
+    const loginResponse = await request(app).post("/api/login").send({
+      nric: "S0000002B", password: "admin123", role: "admin",
+    });
 
     const response = await request(app)
       .get("/api/feedback?category=Estate&status=Closed")
-      .set("x-user-role", "admin");
+      .set("Authorization", `Bearer ${loginResponse.body.token}`);
 
     expect(response.status).toBe(200);
     expect(response.body.feedback.map((item) => item.id)).toEqual(["estate-closed"]);
@@ -224,15 +260,22 @@ describe("CivicVoice baseline API", () => {
     }));
     await db.write();
     const app = await createApp({ db });
+    const loginResponse = await request(app).post("/api/login").send({
+      nric: "S0000002B", password: "admin123", role: "admin",
+    });
 
-    const secondPage = await request(app).get("/api/feedback?category=Estate&page=2").set("x-user-role", "admin");
+    const secondPage = await request(app)
+      .get("/api/feedback?category=Estate&page=2")
+      .set("Authorization", `Bearer ${loginResponse.body.token}`);
     expect(secondPage.body.pagination).toEqual({ page: 2, pageSize: 10, total: 23, totalPages: 3 });
     expect(secondPage.body.feedback.map((item) => item.id)).toEqual([
       "feedback-13", "feedback-12", "feedback-11", "feedback-10", "feedback-9",
       "feedback-8", "feedback-7", "feedback-6", "feedback-5", "feedback-4",
     ]);
 
-    const finalPage = await request(app).get("/api/feedback?page=99").set("x-user-role", "admin");
+    const finalPage = await request(app)
+      .get("/api/feedback?page=99")
+      .set("Authorization", `Bearer ${loginResponse.body.token}`);
     expect(finalPage.body.pagination.page).toBe(3);
     expect(finalPage.body.feedback).toHaveLength(3);
   });
@@ -246,15 +289,32 @@ describe("CivicVoice baseline API", () => {
     }];
     await db.write();
     const app = await createApp({ db });
+    const loginResponse = await request(app).post("/api/login").send({
+      nric: "S0000002B", password: "admin123", role: "admin",
+    });
 
     const response = await request(app)
       .get("/api/feedback/export.csv?category=Estate&query=Aisha")
-      .set("x-user-role", "admin");
+      .set("Authorization", `Bearer ${loginResponse.body.token}`);
 
     expect(response.status).toBe(200);
     expect(response.headers["content-type"]).toContain("text/csv");
     expect(response.headers["content-disposition"]).toContain("civicvoice-feedback.csv");
     expect(response.text).toContain('"Aisha, ""Ace"""');
     expect(response.text).toContain('"A comma, a quote "" and\na newline."');
+  });
+
+  it("blocks citizens who spoof the old admin role header", async () => {
+    const app = await testApp();
+    const loginResponse = await request(app).post("/api/login").send({
+      nric: "S0000001A", password: "citizen123", role: "citizen",
+    });
+
+    const response = await request(app)
+      .get("/api/feedback")
+      .set("x-user-role", "admin")
+      .set("Authorization", `Bearer ${loginResponse.body.token}`);
+
+    expect(response.status).toBe(403);
   });
 });

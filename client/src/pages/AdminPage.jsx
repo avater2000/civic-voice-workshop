@@ -7,7 +7,7 @@ import { FeedbackText } from "../components/FeedbackText";
 const FILTER_CATEGORIES = ["Estate", "Transport", "Environment", "Other"];
 const FILTER_STATUSES = ["New", "In review", "Closed"];
 
-export function AdminPage({ user }) {
+export function AdminPage({ session }) {
   const [feedback, setFeedback] = useState([]);
   const [error, setError] = useState("");
   const [query, setQuery] = useState("");
@@ -29,7 +29,7 @@ export function AdminPage({ user }) {
     setIsLoading(true);
     setError("");
 
-    return getFeedback(user, { category, status, page })
+    return getFeedback(session, { category, status, page })
       .then((response) => {
         setFeedback(sortFeedbackNewestFirst(response.feedback));
         setPagination(response.pagination ?? { page: 1, total: response.feedback.length, totalPages: 1 });
@@ -40,13 +40,13 @@ export function AdminPage({ user }) {
 
   useEffect(() => {
     loadFeedback();
-  }, [user, category, status, page]);
+  }, [session, category, status, page]);
 
   async function updateStatus(feedbackId, status) {
     setStatusError("");
     setUpdatingId(feedbackId);
     try {
-      const response = await updateFeedbackStatus(user, feedbackId, status);
+      const response = await updateFeedbackStatus(session, feedbackId, status);
       setFeedback((items) => items.map((item) => item.id === feedbackId ? response.feedback : item));
     } catch (requestError) {
       setStatusError(requestError.message || "We could not update the feedback status.");
@@ -85,7 +85,7 @@ export function AdminPage({ user }) {
     setIsExporting(true);
     setExportError("");
     try {
-      const blob = await getFeedbackCsv(user, { category, status, query });
+      const blob = await getFeedbackCsv(session, { category, status, query });
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;

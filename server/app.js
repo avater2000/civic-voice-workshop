@@ -26,10 +26,6 @@ function getFilteredFeedback(feedback, { category, status, query }) {
 const FEEDBACK_STATUSES = new Set(["New", "In review", "Closed"]);
 const FEEDBACK_PAGE_SIZE = 10;
 
-function isAdminRequest(req) {
-  return req.header("x-user-role") === "admin";
-}
-
 function paginateFeedback(feedback, requestedPage) {
   const total = feedback.length;
   const totalPages = Math.max(1, Math.ceil(total / FEEDBACK_PAGE_SIZE));
@@ -49,8 +45,26 @@ export async function createApp(options = {}) {
   const loginRateLimiter = options.loginRateLimiter ?? createLoginRateLimiter(options.loginRateLimitOptions);
   const categorizeFeedback = options.categorizeFeedback ?? createFeedbackCategorizer();
   const app = express();
+  const sessions = new Map();
   app.use(cors());
   app.use(express.json());
+
+  function createSession(user) {
+    const token = crypto.randomBytes(32).toString("base64url");
+    sessions.set(token, { nric: user.nric, role: user.role });
+    return token;
+  }
+
+  function requireAdmin(req, res, next) {
+    const authorization = req.header("authorization") ?? "";
+    const [scheme, token] = authorization.split(" ");
+    const session = scheme === "Bearer" && token ? sessions.get(token) : null;
+    if (session?.role !== "admin") {
+      return sendError(res, 403, "FORBIDDEN", "Admin access required.");
+    }
+    req.session = session;
+    return next();
+  }
 
   app.get("/api/health", (_req, res) => {
     res.json({ ok: true, service: "civic-voice-api" });
@@ -74,23 +88,16 @@ export async function createApp(options = {}) {
 
     loginRateLimiter.clear(rateLimitKey);
 
-    // Workshop baseline only: this is deliberately not a production session.
-    const token = Buffer.from(`${user.nric}:${user.role}`).toString("base64");
+    const token = createSession(user);
     return res.json({ token, user: { nric: user.nric, name: user.name, role: user.role } });
   });
 
-  app.get("/api/feedback", (req, res) => {
-    if (!isAdminRequest(req)) {
-      return sendError(res, 403, "FORBIDDEN", "Admin access required.");
-    }
+  app.get("/api/feedback", requireAdmin, (req, res) => {
     const feedback = getFilteredFeedback(db.data.feedback, req.query);
     return res.json(paginateFeedback(feedback, req.query.page));
   });
 
-  app.get("/api/feedback/export.csv", (req, res) => {
-    if (!isAdminRequest(req)) {
-      return sendError(res, 403, "FORBIDDEN", "Admin access required.");
-    }
+  app.get("/api/feedback/export.csv", requireAdmin, (req, res) => {
     const feedback = getFilteredFeedback(db.data.feedback, req.query);
     const rows = [
       ["Reference", "Name", "Identifier", "Category", "Status", "Submitted at", "Feedback"],
@@ -101,11 +108,7 @@ export async function createApp(options = {}) {
     return res.send(toCsv(rows));
   });
 
-  app.patch("/api/feedback/:id/status", async (req, res) => {
-    if (!isAdminRequest(req)) {
-      return sendError(res, 403, "FORBIDDEN", "Admin access required.");
-    }
-
+  app.patch("/api/feedback/:id/status", requireAdmin, async (req, res) => {
     const { status } = req.body ?? {};
     if (!FEEDBACK_STATUSES.has(status)) {
       return sendError(res, 400, "INVALID_STATUS", "Choose a valid feedback status.");
@@ -119,14 +122,11 @@ export async function createApp(options = {}) {
     return res.json({ feedback });
   });
 
-  app.get("/api/feedback/:id", (req, res) => {
-    if (!isAdminRequest(req)) {
-      return sendError(res, 403, "FORBIDDEN", "Admin access required.");
-    }
+  app.get("/api/feedback/:id", requireAdmin, (req, res) => {
     const feedback = db.data.feedback.find((item) => item.id === req.params.id);
     if (!feedback) {
       return sendError(res, 404, "FEEDBACK_NOT_FOUND", "Feedback was not found.");
-  }
+    }
     return res.json({ feedback });
   });
 
