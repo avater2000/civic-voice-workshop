@@ -13,7 +13,7 @@ const children = [
     env: { ...process.env, VITE_API_URL: apiUrl },
     stdio: "inherit",
   }),
-  spawn(process.execPath, ["server/index.js"], {
+  spawn(process.execPath, ["--env-file-if-exists=.env", "server/index.js"], {
     cwd,
     env: { ...process.env, PORT: apiPort },
     stdio: "inherit",
