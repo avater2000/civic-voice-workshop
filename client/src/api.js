@@ -66,3 +66,17 @@ export function updateFeedbackStatus(user, feedbackId, status) {
 export function getFeedbackDetail(user, id) {
   return api(`/api/feedback/${encodeURIComponent(id)}`, { headers: { "x-user-role": user.role } });
 }
+
+export async function requestFeedbackSpeech(message) {
+  const response = await fetch(`${API_URL}/api/feedback/speech`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ message }),
+  });
+  if (!response.ok) {
+    const body = await response.json();
+    const error = typeof body.error === "object" ? body.error : { message: body.error };
+    throw new ApiError(error.message ?? "Audio playback could not be created.", response.status, error.code);
+  }
+  return response.blob();
+}

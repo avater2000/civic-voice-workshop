@@ -9,6 +9,7 @@ import { sendError } from "./lib/errors.js";
 import { toCsv } from "./lib/csv.js";
 import { normalizeFeedbackText } from "./lib/feedback-text.js";
 import { createFeedbackCategorizer } from "./lib/categorize.js";
+import { createSpeechSynthesizer } from "./lib/tts.js";
 
 function getFilteredFeedback(feedback, { category, status, query }) {
   let filtered = [...feedback].sort(
@@ -48,6 +49,7 @@ export async function createApp(options = {}) {
   const db = options.db ?? (await createDb());
   const loginRateLimiter = options.loginRateLimiter ?? createLoginRateLimiter(options.loginRateLimitOptions);
   const categorizeFeedback = options.categorizeFeedback ?? createFeedbackCategorizer();
+  const synthesizeSpeech = options.synthesizeSpeech ?? createSpeechSynthesizer();
   const app = express();
   app.use(cors());
   app.use(express.json());
@@ -128,6 +130,19 @@ export async function createApp(options = {}) {
       return sendError(res, 404, "FEEDBACK_NOT_FOUND", "Feedback was not found.");
   }
     return res.json({ feedback });
+  });
+
+  app.post("/api/feedback/speech", async (req, res) => {
+    const { message } = req.body ?? {};
+    if (typeof message !== "string" || !message.trim()) {
+      return sendError(res, 400, "INVALID_FEEDBACK", "Feedback is required to create audio.");
+    }
+    try {
+      const audio = await synthesizeSpeech(message);
+      return res.type("audio/mpeg").send(audio);
+    } catch (error) {
+      return sendError(res, 503, error.code ?? "TTS_FAILED", error.message ?? "Audio playback could not be created.");
+    }
   });
 
   app.post("/api/feedback", async (req, res) => {
