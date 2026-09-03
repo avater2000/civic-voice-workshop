@@ -1,7 +1,9 @@
+import { hashPassword } from "./passwords.js";
+
 export const seedData = {
   users: [
-    { nric: "S0000001A", password: "citizen123", name: "Aisha Rahman", role: "citizen" },
-    { nric: "S0000002B", password: "admin123", name: "Daniel Tan", role: "admin" },
+    { nric: "S0000001A", passwordHash: hashPassword("citizen123"), name: "Aisha Rahman", role: "citizen" },
+    { nric: "S0000002B", passwordHash: hashPassword("admin123"), name: "Daniel Tan", role: "admin" },
   ],
   feedback: [
     {
