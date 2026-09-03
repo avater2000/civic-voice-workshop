@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { submitFeedback } from "../api";
+import { requestFeedbackSpeech, submitFeedback } from "../api";
 import { hasFeedbackContent, limitFeedbackLength, MAX_FEEDBACK_LENGTH } from "../feedback";
 
 const categories = ["Estate", "Transport", "Environment", "Other"];
@@ -10,11 +10,21 @@ export function CitizenPage({ user }) {
   const [submitted, setSubmitted] = useState(false);
   const [reference, setReference] = useState("");
   const [error, setError] = useState("");
+  const [spokenMessage, setSpokenMessage] = useState("");
+  const [audioError, setAudioError] = useState("");
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const [isPreparingAudio, setIsPreparingAudio] = useState(false);
   const successHeading = useRef(null);
+  const audio = useRef(null);
 
   useEffect(() => {
     if (submitted) successHeading.current?.focus();
   }, [submitted]);
+
+  useEffect(() => () => {
+    audio.current?.pause();
+    if (audio.current?.src) URL.revokeObjectURL(audio.current.src);
+  }, []);
 
   async function handleSubmit(event) {
     event.preventDefault();
@@ -30,6 +40,7 @@ export function CitizenPage({ user }) {
     try {
       const response = await submitFeedback({ nric: user.nric, name: user.name, message, category });
       setReference(response.feedback.reference);
+      setSpokenMessage(message);
       setSubmitted(true);
       setMessage("");
     } catch (requestError) {
@@ -40,7 +51,39 @@ export function CitizenPage({ user }) {
   function submitAnother() {
     setError("");
     setReference("");
+    setSpokenMessage("");
+    setAudioError("");
+    audio.current?.pause();
+    audio.current = null;
+    setIsSpeaking(false);
     setSubmitted(false);
+  }
+
+  async function toggleSpeech() {
+    setAudioError("");
+    if (audio.current) {
+      if (isSpeaking) {
+        audio.current.pause();
+        setIsSpeaking(false);
+      } else {
+        await audio.current.play();
+        setIsSpeaking(true);
+      }
+      return;
+    }
+    setIsPreparingAudio(true);
+    try {
+      const blob = await requestFeedbackSpeech(spokenMessage);
+      const player = new Audio(URL.createObjectURL(blob));
+      player.addEventListener("ended", () => setIsSpeaking(false));
+      audio.current = player;
+      await player.play();
+      setIsSpeaking(true);
+    } catch (requestError) {
+      setAudioError(requestError.message || "Audio playback could not be created.");
+    } finally {
+      setIsPreparingAudio(false);
+    }
   }
 
   return (
@@ -56,6 +99,10 @@ export function CitizenPage({ user }) {
             <h2 ref={successHeading} tabIndex="-1">Feedback received</h2>
             <div className="success-banner">Thank you. Your feedback has been received.</div>
             <p className="submission-reference">Your reference number: <strong>{reference}</strong></p>
+            <button className="text-button" type="button" onClick={toggleSpeech} disabled={isPreparingAudio}>
+              {isPreparingAudio ? "Preparing audio…" : isSpeaking ? "Pause feedback audio" : "Read feedback aloud"}
+            </button>
+            {audioError && <p className="error-message" role="alert">{audioError}</p>}
             <button className="primary-button" type="button" onClick={submitAnother}>Submit another</button>
           </div>
         ) : <form onSubmit={handleSubmit}>

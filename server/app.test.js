@@ -79,6 +79,20 @@ describe("CivicVoice baseline API", () => {
     expect(categorizeFeedback).toHaveBeenCalledWith("Please add more benches.");
   });
 
+  it("creates speech with an injected synthesizer and never synthesizes blank feedback", async () => {
+    const synthesizeSpeech = vi.fn().mockResolvedValue(Buffer.from("audio"));
+    const app = await testApp({ synthesizeSpeech });
+
+    const speech = await request(app).post("/api/feedback/speech").send({ message: "Please add benches." });
+    expect(speech.status).toBe(200);
+    expect(speech.headers["content-type"]).toMatch(/audio\/mpeg/);
+    expect(synthesizeSpeech).toHaveBeenCalledWith("Please add benches.");
+
+    const blank = await request(app).post("/api/feedback/speech").send({ message: " \n " });
+    expect(blank.status).toBe(400);
+    expect(synthesizeSpeech).toHaveBeenCalledTimes(1);
+  });
+
   it("normalizes markup-looking feedback before it is stored", async () => {
     const app = await testApp();
     const response = await request(app).post("/api/feedback").send({
