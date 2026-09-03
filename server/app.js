@@ -45,9 +45,15 @@ export async function createApp(options = {}) {
     if (req.header("x-user-role") !== "admin") {
       return sendError(res, 403, "FORBIDDEN", "Admin access required.");
     }
-    const feedback = [...db.data.feedback].sort(
+    let feedback = [...db.data.feedback].sort(
       (first, second) => new Date(second.createdAt) - new Date(first.createdAt),
     );
+    if (req.query.category) {
+      feedback = feedback.filter((item) => item.category === req.query.category);
+    }
+    if (req.query.status) {
+      feedback = feedback.filter((item) => item.status === req.query.status);
+    }
     return res.json({ feedback });
   });
 

@@ -62,6 +62,10 @@ textarea { resize: vertical; line-height: 1.6; }
 .submission-reference strong { color: var(--text); font-variant-numeric: tabular-nums; }
 .submission-success h2 { margin: 0 0 8px; font-size: 32px; }
 .admin-shell { max-width: 1050px; }
+.inbox-filters { display: flex; align-items: end; gap: 14px; margin: 0 0 20px; }
+.inbox-filters label { flex: 1; margin: 0; }
+.inbox-filters select { width: 100%; border: 1px solid var(--line); border-radius: 8px; background: var(--input); color: var(--text); padding: 13px 14px; }
+.clear-filters { padding: 13px 0; white-space: nowrap; }
 .inbox-state { display: grid; justify-items: start; gap: 8px; min-height: 230px; align-content: center; padding: 32px; background: white; border: 1px solid #e2dfd7; border-radius: 14px; box-shadow: 0 8px 30px rgba(28,36,42,.04); }
 .inbox-state h2 { margin: 0; font-size: 28px; }
 .inbox-state p { max-width: 430px; margin: 0; color: #69747b; line-height: 1.6; }
@@ -89,6 +93,9 @@ textarea { resize: vertical; line-height: 1.6; }
   .signed-in { display: none; }
   .form-footer { align-items: stretch; flex-direction: column; }
   .inbox-summary { grid-template-columns: repeat(2, 1fr); }
+  .inbox-filters { align-items: stretch; flex-direction: column; }
+  .inbox-filters label { width: 100%; }
+  .clear-filters { align-self: start; }
   .form-actions { align-items: stretch; flex-direction: column; gap: 10px; }
   .form-footer .primary-button { width: 100%; }
 }
