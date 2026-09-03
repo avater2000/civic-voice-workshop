@@ -77,6 +77,19 @@ describe("CivicVoice baseline API", () => {
     expect(response.body.feedback.category).toBe("Estate");
   });
 
+  it("normalizes markup-looking feedback before it is stored", async () => {
+    const app = await testApp();
+    const response = await request(app).post("/api/feedback").send({
+      nric: "S0000001A", name: "Aisha Rahman", category: "Other",
+      message: '<img src=x onerror="globalThis.workshopPwned=true">',
+    });
+
+    expect(response.status).toBe(201);
+    expect(response.body.feedback.message).toBe('‹img src=x onerror="globalThis.workshopPwned=true"›');
+    expect(response.body.feedback.message).not.toContain("<");
+    expect(globalThis.workshopPwned).toBeUndefined();
+  });
+
   it("rejects blank and whitespace-only feedback", async () => {
     const app = await testApp();
 

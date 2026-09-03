@@ -7,6 +7,7 @@ import { createLoginRateLimiter } from "./lib/login-rate-limiter.js";
 import { verifyPassword } from "./lib/passwords.js";
 import { sendError } from "./lib/errors.js";
 import { toCsv } from "./lib/csv.js";
+import { normalizeFeedbackText } from "./lib/feedback-text.js";
 
 function getFilteredFeedback(feedback, { category, status, query }) {
   let filtered = [...feedback].sort(
@@ -110,7 +111,7 @@ export async function createApp(options = {}) {
       return sendError(res, 400, "INVALID_CATEGORY", "Choose a valid feedback category.");
     }
     const feedback = {
-      id: crypto.randomUUID(), reference: `CV-${crypto.randomInt(100000, 1000000)}`, nric, name, message, category, status: "New",
+      id: crypto.randomUUID(), reference: `CV-${crypto.randomInt(100000, 1000000)}`, nric, name, message: normalizeFeedbackText(message), category, status: "New",
       createdAt: new Date().toISOString(),
     };
     db.data.feedback.unshift(feedback);
