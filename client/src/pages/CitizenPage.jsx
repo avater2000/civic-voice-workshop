@@ -2,8 +2,11 @@ import { useEffect, useRef, useState } from "react";
 import { submitFeedback } from "../api";
 import { hasFeedbackContent, limitFeedbackLength, MAX_FEEDBACK_LENGTH } from "../feedback";
 
+const categories = ["Estate", "Transport", "Environment", "Other"];
+
 export function CitizenPage({ user }) {
   const [message, setMessage] = useState("");
+  const [category, setCategory] = useState(categories[0]);
   const [submitted, setSubmitted] = useState(false);
   const [reference, setReference] = useState("");
   const [error, setError] = useState("");
@@ -25,7 +28,7 @@ export function CitizenPage({ user }) {
       return;
     }
     try {
-      const response = await submitFeedback({ nric: user.nric, name: user.name, message });
+      const response = await submitFeedback({ nric: user.nric, name: user.name, message, category });
       setReference(response.feedback.reference);
       setSubmitted(true);
       setMessage("");
@@ -68,6 +71,15 @@ export function CitizenPage({ user }) {
               onChange={(event) => setMessage(limitFeedbackLength(event.target.value))}
               placeholder="Share your feedback here..."
             />
+          </label>
+          <label htmlFor="feedback-category">Category
+            <select
+              id="feedback-category"
+              value={category}
+              onChange={(event) => setCategory(event.target.value)}
+            >
+              {categories.map((option) => <option key={option}>{option}</option>)}
+            </select>
           </label>
           <p id="feedback-guidance" className="visually-hidden">
             Please do not include sensitive personal information. Maximum {MAX_FEEDBACK_LENGTH} characters.

@@ -2,6 +2,7 @@ import crypto from "node:crypto";
 import express from "express";
 import cors from "cors";
 import { createDb } from "./lib/db.js";
+import { isFeedbackCategory } from "./lib/categories.js";
 
 export async function createApp(options = {}) {
   const db = options.db ?? (await createDb());
@@ -33,12 +34,15 @@ export async function createApp(options = {}) {
   });
 
   app.post("/api/feedback", async (req, res) => {
-    const { nric, name, message } = req.body ?? {};
+    const { nric, name, message, category } = req.body ?? {};
     if (typeof message !== "string" || !message.trim()) {
       return res.status(400).json({ error: "Please enter feedback that is more than spaces or line breaks." });
     }
+    if (!isFeedbackCategory(category)) {
+      return res.status(400).json({ error: "Choose a valid feedback category." });
+    }
     const feedback = {
-      id: crypto.randomUUID(), reference: `CV-${crypto.randomInt(100000, 1000000)}`, nric, name, message, category: "General", status: "New",
+      id: crypto.randomUUID(), reference: `CV-${crypto.randomInt(100000, 1000000)}`, nric, name, message, category, status: "New",
       createdAt: new Date().toISOString(),
     };
     db.data.feedback.unshift(feedback);
