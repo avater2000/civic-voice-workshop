@@ -27,6 +27,11 @@ h1, h2 { font-family: Fraunces, Georgia, serif; letter-spacing: -.04em; }
 .login-card { width: min(100%, 420px); }
 .login-card h2 { font-size: 42px; line-height: 1.05; margin: 14px 0 8px; }
 .login-card > p { margin: 0 0 28px; }
+.api-status { display: flex; align-items: center; gap: 8px; margin: -14px 0 22px; color: var(--muted); font-size: 13px; }
+.api-status-dot { width: 9px; height: 9px; flex: 0 0 auto; border-radius: 50%; background: #9a5b00; }
+.api-status-online .api-status-dot { background: #26703b; }
+.api-status-offline { color: #b2252a; }
+.api-status-offline .api-status-dot { background: #b2252a; }
 .role-switch { display: grid; grid-template-columns: 1fr 1fr; padding: 4px; border-radius: 9px; background: var(--switch); margin-bottom: 22px; }
 .role-switch button { border: 0; border-radius: 6px; padding: 10px; color: var(--muted); background: transparent; }
 .role-switch button.active { background: var(--surface); color: var(--text); font-weight: 700; box-shadow: 0 1px 3px rgba(0,0,0,.18); }

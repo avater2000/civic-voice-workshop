@@ -13,6 +13,9 @@ async function api(path, options = {}) {
 export function login(credentials) {
   return api("/api/login", { method: "POST", body: JSON.stringify(credentials) });
 }
+export function getHealthStatus() {
+  return api("/api/health").then((health) => health.ok === true);
+}
 export function submitFeedback(feedback) {
   return api("/api/feedback", { method: "POST", body: JSON.stringify(feedback) });
 }

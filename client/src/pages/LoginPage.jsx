@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { login } from "../api";
+import { ApiStatusIndicator } from "../components/ApiStatusIndicator";
 import { isValidWorkshopNric } from "../nric";
 
 export function LoginPage({ onLogin }) {
@@ -43,6 +44,7 @@ export function LoginPage({ onLogin }) {
           <div className="eyebrow">Secure sign in</div>
           <h2>Welcome to CivicVoice</h2>
           <p className="muted">Use your NRIC and password to continue.</p>
+          <ApiStatusIndicator />
           <div className="role-switch" role="tablist" aria-label="Sign-in mode">
             <button className={role === "citizen" ? "active" : ""} onClick={() => setRole("citizen")} type="button">Public</button>
             <button className={role === "admin" ? "active" : ""} onClick={() => setRole("admin")} type="button">Admin</button>
