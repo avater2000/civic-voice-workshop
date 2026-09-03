@@ -50,6 +50,17 @@ describe("API health checks", () => {
     );
   });
 
+  it("includes the requested inbox page with active filters", async () => {
+    const fetch = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ feedback: [], pagination: {} }) });
+    vi.stubGlobal("fetch", fetch);
+
+    await getFeedback({ role: "admin" }, { category: "Estate", page: 2 });
+    expect(fetch).toHaveBeenCalledWith(
+      "http://localhost:3001/api/feedback?category=Estate&page=2",
+      expect.any(Object),
+    );
+  });
+
   it("requests CSV with all active filters and the admin role", async () => {
     const fetch = vi.fn().mockResolvedValue({ ok: true, blob: async () => new Blob(["csv"]) });
     vi.stubGlobal("fetch", fetch);

@@ -26,6 +26,7 @@ function feedbackQuery(filters = {}) {
   if (filters.category) parameters.set("category", filters.category);
   if (filters.status) parameters.set("status", filters.status);
   if (filters.query) parameters.set("query", filters.query);
+  if (filters.page && filters.page > 1) parameters.set("page", filters.page);
   return parameters.size ? `?${parameters}` : "";
 }
 
